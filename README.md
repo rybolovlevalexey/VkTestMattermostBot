@@ -1,3 +1,22 @@
+## Работа с tarantool
+#### 1. Предварительно нужно выполнить
+```bash
+sudo apt-get install libssl-dev pkg-config
+```
+Чтобы не было проблем с подключением через SSL
+
+#### 2. Должен быть установлен tarantool 
+```bash
+sudo apt-get install tarantool
+
+```
+#### 3. Необходимо запустить файл с настройками базы данных (позже скорее всего будет через Docker)
+```bash
+tarantool /internal/database/init.lua 
+```
+
+
+
 ## Запуск Mattermost локально через Docker для тестирования
 
 ### Требования

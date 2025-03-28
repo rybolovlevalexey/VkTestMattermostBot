@@ -1,10 +1,11 @@
-module vk_back_dev_test
+module VkTestMattermostBot
 
 go 1.23.3
 
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/mattermost/mattermost-server/v6 v6.7.2
+	github.com/tarantool/go-tarantool v1.12.2
 )
 
 require (
@@ -41,9 +42,7 @@ require (
 	github.com/spacemonkeygo/spacelog v0.0.0-20180420211403-2296661a0572 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/tarantool/go-openssl v0.0.8-0.20230307065445-720eeb389195 // indirect
-	github.com/tarantool/go-tarantool v1.12.2 // indirect
 	github.com/tinylib/msgp v1.1.6 // indirect
-	github.com/viciious/go-tarantool v1.2.2 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/wiggin77/merror v1.0.3 // indirect

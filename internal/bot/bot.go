@@ -7,14 +7,19 @@ import (
 
 	"github.com/mattermost/mattermost-server/v6/model"
 	
-	"vk_back_dev_test/internal/config"
-	"vk_back_dev_test/internal/database"
+	"VkTestMattermostBot/internal/config"
+	"VkTestMattermostBot/internal/database"
 )
 
 type MattermostBot struct{
 	Client	*model.Client4;
 	WSclient 	*model.WebSocketClient;
 	BotConfig	config.BotConfig;
+}
+
+type DialogStatusFlags struct{
+	creatingNewVote bool;
+
 }
 
 
@@ -71,6 +76,8 @@ func processEvent(event *model.WebSocketEvent, client *model.Client4, botConfig 
 		log.Printf("Ошибка разбора сообщения: %v", err)
 		return
 	}
+	
+	log.Println("ChannelId ", post.ChannelId)
 
 	if post.UserId == botConfig.BotUserID {
 		log.Println("Получено сообщение от самого бота")
@@ -90,7 +97,7 @@ func handleCommand(post *model.Post, client *model.Client4, botConfig config.Bot
 	
 	// запуск необходимых методов для выполнения логики приложения
 	flagDoneMainLogic, resultMainLogic := mainLogic(post.Message, botConfig, post.UserId)
-	log.Println(flagDoneMainLogic, resultMainLogic)
+	log.Println("MainLogic ", flagDoneMainLogic, resultMainLogic)
 
 	// создание сообщения, отвечающего пользователю на его запрос
 	reply := &model.Post{
@@ -108,9 +115,11 @@ func generateResponse(message string, botConfig config.BotConfig) string {
 	message = strings.TrimSpace(message)
 
 	switch {
-	case strings.Contains(message, "help"):  // получено сообщение с help
+	case strings.Contains(message, "help"):  
+		// получено сообщение с help
 		return BotAnswers["help"]
-	case strings.TrimSpace(strings.Replace(message, botConfig.BotUserName, "", 1)) == "":  // получено пустое сообщение
+	case strings.TrimSpace(strings.Replace(strings.Replace(message, botConfig.BotUserName, "", 1), "@", "", 1)) == "":  
+		// получено пустое сообщение
 		return BotAnswers["help"]
 	case strings.Contains(message, "create"):  // получена команда на создание нового голосования
 		return ""

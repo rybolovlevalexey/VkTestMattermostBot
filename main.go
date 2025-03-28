@@ -3,11 +3,12 @@ package main
 import (
 	"log"
 
-	"vk_back_dev_test/internal/core"
-	"vk_back_dev_test/internal/bot"
-	"vk_back_dev_test/internal/config"
+	"VkTestMattermostBot/internal/bot"
+	"VkTestMattermostBot/internal/config"
+	"VkTestMattermostBot/internal/core"
 
-	// "github.com/tarantool/go-tarantool"
+	"github.com/tarantool/go-tarantool"
+	// "github.com/chilts/sid"
 )
 
 func main() {
@@ -19,8 +20,18 @@ func main() {
 	}
 	appLogger.Println("Успешно загружены конфиги и инициализировван логгер")
 	
-
-	//appLogger.Printf("Подключение к базе данных %s:%s выполнено успешно\n", dbConfig.Host, dbConfig.Port)
+	// создание подключения к базе данных
+	dbConfig := config.LoadDBConfig()
+	opts := tarantool.Opts{
+		User: dbConfig.User, 
+		Pass: dbConfig.Password,
+	}
+    conn, err := tarantool.Connect(dbConfig.Host + ":" + dbConfig.Port, opts)
+    if err != nil {
+        panic(err)
+    }
+    defer conn.Close()
+	appLogger.Printf("Подключение к базе данных %s:%s выполнено успешно\n", dbConfig.Host, dbConfig.Port)
 
 	// Создание и запуск бота
 	bot.StartBot()

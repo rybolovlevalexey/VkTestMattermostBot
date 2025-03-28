@@ -1,7 +1,7 @@
 package usecases
 
 import (
-	"vk_back_dev_test/internal/database"
+	"VkTestMattermostBot/internal/database"
 )
 
 // создание нового голосования
