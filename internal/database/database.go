@@ -10,6 +10,7 @@ import(
 
 var DbConnection *tarantool.Connection
 
+
 // получение списка id всех голосований
 func GetVotesIds() []int{
 	var ids []int
@@ -42,12 +43,35 @@ func GetVotesIds() []int{
 	return ids
 }
 
-// получение списка названий всех голосованийй
+
+// получение списка названий всех голосований
 func GetVotesNames() []string{
 	var names []string
 
+	// Создаем SelectRequest
+	req := tarantool.NewSelectRequest("vote").
+		Key([]interface{}{}) // пустой ключ для выбора всех записей
+
+	// Выполняем запрос
+	resp, _ := DbConnection.Do(req).Get()
+
+	// Извлекаем поле namr
+	for _, tuple := range resp.Data {
+		// Проверяем тип данных
+		fields, ok := tuple.([]interface{})
+		if !ok || len(fields) == 0 {
+			continue
+		}
+		
+		// Второе поле - name (string)
+		if name, ok := fields[1].(string); ok {
+			names = append(names, name)
+		}
+	}
+
 	return names
 }
+
 
 // получение информации о голосовании по id
 func GetVoteInfoById(voteId int) VoteModel{
@@ -56,12 +80,14 @@ func GetVoteInfoById(voteId int) VoteModel{
 	return resultVote
 }
 
+
 // получение информации о голосовании по названию
 func GetVoteInfoByName(voteName string) VoteModel{
 	var resultVote VoteModel
 
 	return resultVote
 }
+
 
 // создание нового голосования
 func AddVote(vote VoteModel) int{
@@ -93,6 +119,7 @@ func AddVote(vote VoteModel) int{
 	return curId
 }
 
+
 // голосование пользователя за определённый вариант в определённом голосовании
 func CastVote(userId int, voteId int, variant string) bool{
 	var resultFlag bool = false
@@ -100,19 +127,42 @@ func CastVote(userId int, voteId int, variant string) bool{
 	return resultFlag
 }
 
+
 // остановка голосования
 func FinishVote(voteId int) bool{
 	var resultFlag bool = false
 
+	req := tarantool.NewUpdateRequest("vote").
+	Index("primary").
+	Key([]interface{}{voteId}).
+	Operations(tarantool.NewOperations().Assign(5, false))
+
+	resp, _ := DbConnection.Do(req).Get()
+	log.Println(resp.SQLInfo)
+	if len(resp.Data) > 0{
+		resultFlag = true
+	}
+
 	return resultFlag
 }
+
 
 // удаление голосования
 func DeleteVote(voteId int) bool{
 	var resultFlag bool = false
 
+	req := tarantool.NewDeleteRequest("vote").Index("primary").Key([]interface{}{voteId})
+
+	// Выполняем запрос
+	resp, _ := DbConnection.Do(req).Get()
+	
+	if len(resp.Data) > 0{
+		resultFlag = true
+	}
+
 	return resultFlag
 }
+
 
 // инициализация базы данных: создание таблицы, задание типов полей, создание первичного индекса
 func InitDataBase(){

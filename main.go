@@ -45,11 +45,16 @@ func main() {
 	//----------
 	// database.AddVote(database.VoteModel{})
 	// log.Println(database.GetVotesIds())
+	/*
 	database.AddVote(database.VoteModel{
 		Name: "новое голосование",
 		Variants: map[string][]string{"cool": []string{}, "not cool": []string{}, },
 		ChanelId: "x123",
 	})
+	*/
+	// log.Println(database.DeleteVote(3))
+	// log.Println(database.GetVotesNames())
+	log.Println(database.FinishVote(2))
 	//----------
 
 	// Создание и запуск бота
