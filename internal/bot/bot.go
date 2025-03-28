@@ -122,6 +122,6 @@ func generateResponse(message string, botConfig config.BotConfig) string {
 // запуск необходимых функций в соответствии с полученным сообщением от пользователя
 func mainLogic(message string, botConfig config.BotConfig, userMatterMostId string) (bool, []database.VoteModel){
 	var result []database.VoteModel
-
+	log.Println(message, botConfig.BotUserName, userMatterMostId)
 	return true, result
 }
