@@ -7,6 +7,10 @@ import (
     "os"
 )
 
+
+var AppLogger *log.Logger
+
+
 // LoggerFactory возвращает новый логгер, который пишет в консоль и файл
 func LoggerFactory(logFilePath string) (*log.Logger, error) {
     // Открываем файл для записи логов

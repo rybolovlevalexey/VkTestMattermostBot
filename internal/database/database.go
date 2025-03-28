@@ -1,11 +1,43 @@
 package database
 
-import()
+import(
+	"log"
 
+	"VkTestMattermostBot/internal/core"
+
+	"github.com/tarantool/go-tarantool"
+)
+
+var DbConnection *tarantool.Connection
 
 // получение списка id всех голосований
 func GetVotesIds() []int{
 	var ids []int
+
+	// Создаем SelectRequest
+	req := tarantool.NewSelectRequest("vote").
+		Key([]interface{}{}) // пустой ключ для выбора всех записей
+
+	// Выполняем запрос
+	resp, err := DbConnection.Do(req).Get()
+	if err != nil {
+		log.Fatalf("Select request failed: %v", err)
+	}
+	//fmt.Println(resp.Data, resp.SQLInfo, resp.Code)
+
+	// Извлекаем ID
+	for _, tuple := range resp.Data {
+		// Проверяем тип данных
+		fields, ok := tuple.([]interface{})
+		if !ok || len(fields) == 0 {
+			continue
+		}
+		
+		// Первое поле - ID (uint64)
+		if id, ok := fields[0].(uint64); ok {
+			ids = append(ids, int(id))
+		}
+	}
 
 	return ids
 }
@@ -33,9 +65,32 @@ func GetVoteInfoByName(voteName string) VoteModel{
 
 // создание нового голосования
 func AddVote(vote VoteModel) int{
-	var id int
+	core.AppLogger.Println("Получен запрос на создание нового голосования")
+	var curId int
 
-	return id
+	for _, elem := range GetVotesIds(){
+		if elem > curId{
+			curId = elem
+		}
+	}
+	
+	curId += 1  // автоинкремент поля id
+	vote.IsActive = true // изначально любое голосование активно
+
+	// Вставка нового голосования в базу данных
+	resp, _ := DbConnection.Call("box.space.vote:insert", []interface{}{
+		[]interface{}{
+			curId, // id
+			vote.Name, // name
+			vote.Description, // description
+			vote.Variants, // variants
+			vote.IsActive, // is_active
+			vote.ChanelId, // chanel_id
+		},
+	})
+	core.AppLogger.Printf("Insert response (id %d)- Code: %d, Data: %v\n", curId, resp.Code, resp.Data)
+
+	return curId
 }
 
 // голосование пользователя за определённый вариант в определённом голосовании
@@ -57,4 +112,44 @@ func DeleteVote(voteId int) bool{
 	var resultFlag bool = false
 
 	return resultFlag
+}
+
+// инициализация базы данных: создание таблицы, задание типов полей, создание первичного индекса
+func InitDataBase(){
+	// Создадим таблицу vote с информацией о голосованиях
+    resp, err := DbConnection.Call("box.schema.space.create", []interface{}{
+        "vote",
+        map[string]bool{"if_not_exists": true},
+	})
+	if err != nil{
+		panic(err)
+	}
+	log.Println(resp.Data)
+	
+    // Зададим типы полей
+    resp, err = DbConnection.Call("box.space.vote:format", [][]map[string]string{
+        {
+            {"name": "id", "type": "unsigned"},
+            {"name": "name", "type": "string"},
+            {"name": "description", "type": "string"},
+			{"name": "variants", "type": "map"},
+			{"name": "is_active", "type": "boolean"},
+			{"name": "chanel_id", "type": "string"},
+        }})
+	if err != nil{
+		panic(err)
+	}
+	log.Println(resp.Data)
+
+    // Создадим первичный индекс
+    resp, err = DbConnection.Call("box.space.vote:create_index", []interface{}{
+        "primary",
+        map[string]interface{}{
+            "parts":         []string{"id"},
+            "if_not_exists": true,
+		}})
+	if err != nil{
+		panic(err)
+	}
+	log.Println(resp.Data)
 }

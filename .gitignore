@@ -1,3 +1,4 @@
 .env
 *.snap
 *.xlog
+app.log
