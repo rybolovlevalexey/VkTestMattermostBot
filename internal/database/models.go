@@ -13,6 +13,7 @@ type VoteModel struct{
 
 type UserModel struct{
 	Id int;
+	MattermostId string;  // id пользователя в Mattermost
 	Username string;  // логин пользователя
 	VotesInfo map[string]string;  // название голосования: вариант за который пользователь отдал свой голос
 }

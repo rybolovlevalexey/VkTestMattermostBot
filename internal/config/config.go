@@ -11,6 +11,7 @@ type BotConfig struct {
 	WebSocketURL string // URL для WebSocket
 	Token       string  // токен бота
 	BotUserID	string // ID бота
+	BotUserName string  // никнейм бота
 }
 
 func LoadBotConfig() BotConfig{
@@ -38,4 +39,24 @@ func LoadLoggerConfig() LoggerConfig{
 	}
 
 	return loggerConfig
+}
+
+
+type DataBaseConfig struct{
+	User string;
+	Password string;
+	Host string;
+	Port string;
+}
+
+func LoadDBConfig() DataBaseConfig{
+	godotenv.Load()
+
+	dbConfig := DataBaseConfig{
+		User: os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
+		Host: os.Getenv("DB_HOST"),
+		Port: os.Getenv("DB_PORT"),
+	}
+	return dbConfig
 }

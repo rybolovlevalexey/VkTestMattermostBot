@@ -4,11 +4,11 @@ import (
 	"log"
 	"strings"
 	"encoding/json"
-	"fmt"
 
 	"github.com/mattermost/mattermost-server/v6/model"
 	
 	"vk_back_dev_test/internal/config"
+	"vk_back_dev_test/internal/database"
 )
 
 type MattermostBot struct{
@@ -17,84 +17,8 @@ type MattermostBot struct{
 	BotConfig	config.BotConfig;
 }
 
-/*
-func CreateBot() MattermostBot{
-	// Конфигурация бота
-	botСonfig := config.LoadBotConfig()
 
-	// клиент Mattermost
-	client := model.NewAPIv4Client(botСonfig.ServerURL)
-	client.SetToken(botСonfig.Token)
-
-	// Проверяем подключение
-	user, _, err := client.GetMe("")
-	if err != nil {
-		log.Fatalf("Ошибка подключения: %v", err)
-	}
-	botСonfig.BotUserID = user.Id
-	log.Printf("Бот запущен как @%s", user.Username)
-
-	// подключение к WevSocket
-	wsClient, err := model.NewWebSocketClient4(botСonfig.WebSocketURL, botСonfig.Token)
-	if err != nil {
-		log.Fatalf("Ошибка WebSocket: %v", err)
-	}
-	defer wsClient.Close()
-
-	stopChan := make(chan bool) // поток для остановки горутины
-
-	go func(){
-		wsClient.Listen()
-		log.Println("WebSocket подключен. Ожидание сообщений")
-	}()
-	
-	return MattermostBot{
-		Client: client,
-		WSclient: wsClient,
-		BotConfig: botСonfig,
-		stopChan: stopChan,
-	}
-}
-
-func (mattermostBot MattermostBot) StartEventLoop(){
-	// Обрабатываем события
-	for event := range mattermostBot.WSclient.EventChannel {
-		if event.EventType() != model.WebsocketEventPosted {
-			continue
-		}
-
-		post := &model.Post{}
-		err := json.Unmarshal([]byte(event.GetData()["post"].(string)), post)
-		if err != nil {
-			log.Printf("Ошибка разбора поста: %v", err)
-			continue
-		}
-
-		if post.UserId == mattermostBot.BotConfig.BotUserID {
-			continue
-		}
-
-		if strings.Contains(post.Message, "@my_go_bot") {
-			reply := &model.Post{
-				ChannelId: post.ChannelId,
-				Message:   "Привет! Я получил ваше сообщение: _" + post.Message + "_",
-			}
-
-			if _, _, err := mattermostBot.Client.CreatePost(reply); err != nil {
-				log.Printf("Ошибка отправки: %v", err)
-			} else {
-				log.Printf("Ответил на сообщение в канале %s", post.ChannelId)
-			}
-		}
-	}
-}
-
-func (mattermost MattermostBot) StopEventLoop(){
-	close(mattermost.stopChan)
-	mattermost.WSclient.Close()
-}
-*/
-
+// Загрузка конфигов бота, инициализация и запуск event loop после подключения к web socket
 func StartBot() {
 	botConfig := config.LoadBotConfig()
 
@@ -107,8 +31,9 @@ func StartBot() {
 	if err != nil {
 		log.Fatalf("Ошибка подключения: %v", err)
 	}
-	botConfig.BotUserID = user.Id
-	log.Printf("Бот запущен как @%s", user.Username)
+
+	botConfig.BotUserID = user.Id  // сохранение id бота, чтобы не отвечать на свои же сообщения
+	botConfig.BotUserName = user.Username  // сохранение username бота, чтобы понимать, что к нему обращаются 
 
 	// Подключение к WebSocket
 	wsClient, err := model.NewWebSocketClient4(botConfig.WebSocketURL, botConfig.Token)
@@ -126,15 +51,14 @@ func StartBot() {
 	select {}
 }
 
+// основной цикл работы бота
 func handleEvents(wsClient *model.WebSocketClient, client *model.Client4, botConfig config.BotConfig) {
-	fmt.Println("here1")
 	for event := range wsClient.EventChannel {
 		processEvent(event, client, botConfig)
 	}
 }
 
 func processEvent(event *model.WebSocketEvent, client *model.Client4, botConfig config.BotConfig) {
-	fmt.Println("here2")
 	// Обрабатываем только новые сообщения
 	if event.EventType() != model.WebsocketEventPosted {
 		log.Println("Получено не новое сообщение")
@@ -148,7 +72,6 @@ func processEvent(event *model.WebSocketEvent, client *model.Client4, botConfig 
 		return
 	}
 
-	// Игнорируем сообщения от самого бота
 	if post.UserId == botConfig.BotUserID {
 		log.Println("Получено сообщение от самого бота")
 		return
@@ -159,19 +82,20 @@ func processEvent(event *model.WebSocketEvent, client *model.Client4, botConfig 
 }
 
 func handleCommand(post *model.Post, client *model.Client4, botConfig config.BotConfig) {
-	fmt.Println("here3")
 	// Реагируем только на упоминания бота
-	
-	if !strings.Contains(post.Message, "@"+botConfig.BotUserID) {
-		// TODO: вот это условие поправить надо
+	if !strings.Contains(post.Message, "@"+botConfig.BotUserName) {
 		log.Println("В сообщении нет упоминания бота")
 		return
 	}
 	
+	// запуск необходимых методов для выполнения логики приложения
+	flagDoneMainLogic, resultMainLogic := mainLogic(post.Message, botConfig, post.UserId)
+	log.Println(flagDoneMainLogic, resultMainLogic)
 
+	// создание сообщения, отвечающего пользователю на его запрос
 	reply := &model.Post{
 		ChannelId: post.ChannelId,
-		Message:   generateResponse(post.Message),
+		Message:   generateResponse(post.Message, botConfig),
 	}
 
 	if _, _, err := client.CreatePost(reply); err != nil {
@@ -179,14 +103,25 @@ func handleCommand(post *model.Post, client *model.Client4, botConfig config.Bot
 	}
 }
 
-func generateResponse(message string) string {
-	// Здесь можно реализовать логику обработки команд
+// генерация ответов в зависимости от сообщения пользователя и результатов выполнения логики приложения
+func generateResponse(message string, botConfig config.BotConfig) string {
+	message = strings.TrimSpace(message)
+
 	switch {
-	case strings.Contains(message, "привет"):
-		return "Привет! Чем могу помочь?"
-	case strings.Contains(message, "help"):
-		return "Доступные команды:\n/help - справка\n/ping - проверка работы"
+	case strings.Contains(message, "help"):  // получено сообщение с help
+		return BotAnswers["help"]
+	case strings.TrimSpace(strings.Replace(message, botConfig.BotUserName, "", 1)) == "":  // получено пустое сообщение
+		return BotAnswers["help"]
+	case strings.Contains(message, "create"):  // получена команда на создание нового голосования
+		return ""
 	default:
-		return "Я получил ваше сообщение: " + message
+		return "" + message
 	}
+}
+
+// запуск необходимых функций в соответствии с полученным сообщением от пользователя
+func mainLogic(message string, botConfig config.BotConfig, userMatterMostId string) (bool, []database.VoteModel){
+	var result []database.VoteModel
+
+	return true, result
 }
