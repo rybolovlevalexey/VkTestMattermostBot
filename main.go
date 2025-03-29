@@ -60,6 +60,8 @@ func main() {
 	log.Println(database.GetVoteInfoByName("новое крутое голосование"))
 	log.Println(database.GetVotesIds())
 	*/
+
+	// database.AddNewVoteInChanel("chanelIDddddddddd", 133)
 	//----------
 
 	// Создание и запуск бота

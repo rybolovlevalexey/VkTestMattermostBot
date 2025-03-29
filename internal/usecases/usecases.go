@@ -5,9 +5,9 @@ import (
 )
 
 // создание нового голосования
-func CreateVote(database.VoteModel) int{
-	var voteId int
-	
+func CreateVote(userId string, chanelId string) int{
+	var voteId = database.AddVote(database.VoteModel{ChanelId: chanelId, CreatorId: userId})
+
 	return voteId 
 }
 

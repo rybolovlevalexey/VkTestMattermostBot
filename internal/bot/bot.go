@@ -4,11 +4,13 @@ import (
 	"log"
 	"strings"
 	"encoding/json"
+	"strconv"
 
 	"github.com/mattermost/mattermost-server/v6/model"
 	
 	"VkTestMattermostBot/internal/config"
 	"VkTestMattermostBot/internal/database"
+	"VkTestMattermostBot/internal/usecases"
 )
 
 type MattermostBot struct{
@@ -17,9 +19,10 @@ type MattermostBot struct{
 	BotConfig	config.BotConfig;
 }
 
-type DialogStatusFlags struct{
-	creatingNewVote bool;
-
+type InfoToGenerateResponse struct{
+	voteId int;
+	chanelId string;
+	creatorId string;
 }
 
 
@@ -96,13 +99,13 @@ func handleCommand(post *model.Post, client *model.Client4, botConfig config.Bot
 	}
 	
 	// запуск необходимых методов для выполнения логики приложения
-	flagDoneMainLogic, resultMainLogic := mainLogic(post.Message, botConfig, post.UserId)
+	flagDoneMainLogic, resultMainLogic, infoGenerateResp := mainLogic(post.Message, botConfig, post.UserId, post.ChannelId)
 	log.Println("MainLogic ", flagDoneMainLogic, resultMainLogic)
 
 	// создание сообщения, отвечающего пользователю на его запрос
 	reply := &model.Post{
 		ChannelId: post.ChannelId,
-		Message:   generateResponse(post.Message, botConfig),
+		Message:   generateResponse(post.Message, botConfig, infoGenerateResp),
 	}
 
 	if _, _, err := client.CreatePost(reply); err != nil {
@@ -111,7 +114,7 @@ func handleCommand(post *model.Post, client *model.Client4, botConfig config.Bot
 }
 
 // генерация ответов в зависимости от сообщения пользователя и результатов выполнения логики приложения
-func generateResponse(message string, botConfig config.BotConfig) string {
+func generateResponse(message string, botConfig config.BotConfig, infoGenerateResp InfoToGenerateResponse) string {
 	message = strings.TrimSpace(message)
 
 	switch {
@@ -122,23 +125,23 @@ func generateResponse(message string, botConfig config.BotConfig) string {
 			// получено пустое сообщение
 			return BotAnswers["help"]
 		case strings.Contains(message, "create"):  // получена команда на создание нового голосования
-			
-			return ""
+			return "Создано голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + "\n\n" + BotAnswers["create"]
 		default:
 			return "" + message
 	}
 }
 
 // запуск необходимых функций в соответствии с полученным сообщением от пользователя
-func mainLogic(message string, botConfig config.BotConfig, userMatterMostId string) (bool, []database.VoteModel){
+func mainLogic(message string, botConfig config.BotConfig, userMatterMostId string, chanelId string) (bool, []database.VoteModel, InfoToGenerateResponse){
 	var result []database.VoteModel
 	log.Println(message, botConfig.BotUserName, userMatterMostId)
 
 	switch {
 	case strings.Contains(message, "create"):
-		// проверить, что нет создоваемых голосований в канале
-		// если есть есть - стоп, если нет поставить режим создания голосования
-		
+		newVoteId := usecases.CreateVote(userMatterMostId, chanelId)
+		return true, result, InfoToGenerateResponse{voteId: newVoteId}
 	}
-	return true, result
+
+
+	return true, result, InfoToGenerateResponse{}
 }

@@ -180,23 +180,29 @@ func AddVote(vote VoteModel) int{
 	
 	curId += 1  // автоинкремент поля id
 	vote.IsActive = true // изначально любое голосование активно
+	vote.IsFillingFinished = false  // но при этом не готово к использованию, потому что не заполнено
+	if vote.Variants == nil{
+		vote.Variants = make(map[string][]string)
+	}
 
-	// Вставка нового голосования в базу данных
-	resp, _ := DbConnection.Call("box.space.vote:insert", []interface{}{
-		[]interface{}{
-			curId, // id
-			vote.Name, // name
-			vote.Description, // description
-			vote.Variants, // variants
-			vote.IsActive, // is_active
-			vote.ChanelId, // chanel_id
-			vote.CreatorId,
-			vote.OneAnswerOpinion,
-		},
-	})
+	// вставка нового голосования
+	insertReq := tarantool.NewInsertRequest(tableNames[0]).
+    Tuple([]interface{}{
+        curId,             // id (unsigned)
+        vote.Name,         // name (string)
+        vote.Description,  // description (string)
+        vote.Variants,     // variants (map)
+        vote.IsActive,     // is_active (boolean)
+        vote.ChanelId,     // chanel_id (string)
+        vote.CreatorId,    // creator_id (unsigned/string)
+        vote.OneAnswerOpinion, // one_answer_opinion (boolean)
+		vote.IsFillingFinished, // is_filling_finished (boolean)
+    })
+	
+	resp, _ := DbConnection.Do(insertReq).Get()
+	core.AppLogger.Println(resp.Error)
+	core.AppLogger.Println(vote.Variants)
 	core.AppLogger.Printf("Insert response (id %d)- Code: %d, Data: %v\n", curId, resp.Code, resp.Data)
-
-	core.AppLogger.Printf("Запрос в БД на создание нового голосования id %v выполнен успешно\n", curId)
 
 	return curId
 }
