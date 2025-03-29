@@ -285,4 +285,45 @@ func UpdateVoteName(voteId int, voteName string){
 }
 
 
-// 
+// изменение описания голосования
+func UpdateVoteDesc(voteId int, voteDesc string){
+	core.AppLogger.Printf("Запрос в БД на обновление описания голосования id %v\n", voteId)
+
+	req := tarantool.NewUpdateRequest(tableNames[0]).
+	Index("primary").
+	Key([]interface{}{voteId}).
+	Operations(tarantool.NewOperations().Assign(2, voteDesc))
+
+	DbConnection.Do(req).Get()
+}
+
+
+// добавление вариантов ответов в голосование
+func UpdateVoteVariants(voteId int, voteVariants []string){
+	core.AppLogger.Printf("Запрос в БД на обновление вариантов ответа голосования id %v\n", voteId)
+
+	voteVariantsMap := make(map[string][]string)
+	for _, elem := range voteVariants{
+		voteVariantsMap[elem] = []string{}
+	}
+
+	req := tarantool.NewUpdateRequest(tableNames[0]).
+	Index("primary").
+	Key([]interface{}{voteId}).
+	Operations(tarantool.NewOperations().Assign(3, voteVariantsMap))
+
+	DbConnection.Do(req).Get()
+}
+
+
+// установление является ли голосование с одним вариантом ответа или нет
+func UpdateVoteIsOneAnswer(voteId int, isOneAnswerVote bool){
+	core.AppLogger.Printf("Запрос в БД на обновление информации о IsOneAnswer голосования id %v\n", voteId)
+
+	req := tarantool.NewUpdateRequest(tableNames[0]).
+	Index("primary").
+	Key([]interface{}{voteId}).
+	Operations(tarantool.NewOperations().Assign(8, isOneAnswerVote))
+
+	DbConnection.Do(req).Get()
+}

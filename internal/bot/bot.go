@@ -25,6 +25,9 @@ type InfoToGenerateResponse struct{
 	chanelId string;
 	creatorId string;
 	updatingNameDone bool;
+	updatingDescDone bool;
+	updatingVarinatsDone bool;
+	updatingIsOneAnswerDone bool;
 }
 
 
@@ -133,7 +136,22 @@ func generateResponse(message string, botConfig config.BotConfig, infoGenerateRe
 				return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " установлено название"
 			}
 			return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не было установлено название (ошибка прав доступа)"
-			
+		case strings.Contains(message, "votedesc"):
+			if infoGenerateResp.updatingDescDone{
+				return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " установлено описание"
+			}
+			return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не установлено описание (ошибка прав доступа)"
+		case strings.Contains(message, "votevariants"):
+			if infoGenerateResp.updatingVarinatsDone{
+				return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " установлены варианты ответа"
+			}
+			return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не установлены варианты ответа (ошибка прав доступа)"
+		case strings.Contains(message, "voteoneanswer"):
+			if infoGenerateResp.updatingIsOneAnswerDone{
+				return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " установлено является ли голосование с одним вариантом ответа или с несколькими"
+			}
+			return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не установлено является ли голосование с одним вариантом ответа или с несколькими (ошибка прав доступа)"
+
 		default:
 			return "" + message
 	}
@@ -149,6 +167,7 @@ func mainLogic(message string, botConfig config.BotConfig,
 	case strings.Contains(message, "create"):
 		newVoteId := usecases.CreateVote(userMatterMostId, chanelId)
 		return result, InfoToGenerateResponse{voteId: newVoteId}
+	
 	case strings.Contains(message, "votename"):
 		messageSplited := strings.Split(message, " ")
 		voteIdStr, voteName := messageSplited[2], strings.Join(messageSplited[3:], " ")
@@ -158,6 +177,48 @@ func mainLogic(message string, botConfig config.BotConfig,
 		resSetVoteName := usecases.SetVoteName(userMatterMostId, voteId, voteName)
 
 		return result, InfoToGenerateResponse{updatingNameDone: resSetVoteName, voteId: voteId}
+	
+	case strings.Contains(message, "votedesc"):
+		messageSplited := strings.Split(message, " ")
+		voteIdStr, voteDesc := messageSplited[2], strings.Join(messageSplited[3:], " ")
+		voteId, _ := strconv.Atoi(voteIdStr)
+		core.AppLogger.Println(voteDesc, voteId)
+
+		resSetVoteDesc := usecases.SetVoteDesc(userMatterMostId, voteId, voteDesc)
+
+		return result, InfoToGenerateResponse{updatingDescDone: resSetVoteDesc, voteId: voteId}
+	
+	case strings.Contains(message, "votevariants"):
+		messageSplited := strings.Split(message, " ")
+		voteIdStr, voteVariants := messageSplited[2], strings.Join(messageSplited[3:], " ")
+		voteId, _ := strconv.Atoi(voteIdStr)
+		core.AppLogger.Println(voteVariants, voteId)
+
+		voteVariantsList := make([]string, 0)
+		for _, elem := range strings.Split(voteVariants, ";"){
+			voteVariantsList = append(voteVariantsList, strings.TrimSpace(elem))
+		}
+
+		resSetVoteVariants := usecases.SetVoteVariants(userMatterMostId, voteId, voteVariantsList)
+
+		return result, InfoToGenerateResponse{updatingVarinatsDone: resSetVoteVariants, voteId: voteId}
+	
+	case strings.Contains(message, "voteoneanswer"):
+		messageSplited := strings.Split(message, " ")
+		voteIdStr, voteOneAnswer := messageSplited[2], strings.Join(messageSplited[3:], " ")
+		voteId, _ := strconv.Atoi(voteIdStr)
+		core.AppLogger.Println(voteOneAnswer, voteId)
+		
+		var voteOneAnswerBool bool
+		if strings.TrimSpace(voteOneAnswer) == "Y"{
+			voteOneAnswerBool = true
+		} else {
+			voteOneAnswerBool = false
+		}
+			
+		resSetVoteIsOneAnswer := usecases.SetVoteIsOneAnswer(userMatterMostId, voteId, voteOneAnswerBool)
+
+		return result, InfoToGenerateResponse{updatingIsOneAnswerDone: resSetVoteIsOneAnswer, voteId: voteId}
 	}
 
 

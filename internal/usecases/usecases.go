@@ -26,18 +26,42 @@ func SetVoteName(userId string, voteId int, voteName string) bool{
 }
 
 // установить описание голосования
-func SetVoteDesc(userId string, voteId int, voteDesc string){
+func SetVoteDesc(userId string, voteId int, voteDesc string) bool{
+	vote := database.GetVoteInfoById(voteId)
 	
+	if vote.CreatorId != userId{
+		return false
+	}
+
+	database.UpdateVoteDesc(voteId, voteDesc)
+
+	return true
 }
 
 // установить варианты ответа голосования
-func SetVoteVariants(userId string, voteId int, voteVariants []string){
+func SetVoteVariants(userId string, voteId int, voteVariants []string) bool{
+	vote := database.GetVoteInfoById(voteId)
 	
+	if vote.CreatorId != userId{
+		return false
+	}
+
+	database.UpdateVoteVariants(voteId, voteVariants)
+
+	return true
 }
 
 // установить голосование с один вариантом ответа или несколькими
-func SetVoteOneAnswer(userId string, voteId int, isOneAnswerVote bool){
+func SetVoteIsOneAnswer(userId string, voteId int, isOneAnswerVote bool) bool{
+	vote := database.GetVoteInfoById(voteId)
 	
+	if vote.CreatorId != userId{
+		return false
+	}
+
+	database.UpdateVoteIsOneAnswer(voteId, isOneAnswerVote)
+
+	return true
 }
 
 // голосование пользователя за определённый вариант в конкретном голосовании
