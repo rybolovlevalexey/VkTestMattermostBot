@@ -111,6 +111,9 @@ func GetVoteInfoById(voteId int) VoteModel{
 		Variants: variants,
 		IsActive: resTuple[4].(bool),
 		ChanelId: resTuple[5].(string),
+		CreatorId: resTuple[6].(string),
+		OneAnswerOpinion: resTuple[7].(bool),
+		IsFillingFinished: resTuple[8].(bool),
 	}
 
 	core.AppLogger.Println("Запрос в БД на получение названий информации о голосовании по Id выполнен успешно")
@@ -154,6 +157,9 @@ func GetVoteInfoByName(voteName string) VoteModel{
 		Variants: variants,
 		IsActive: resTuple[4].(bool),
 		ChanelId: resTuple[5].(string),
+		CreatorId: resTuple[6].(string),
+		OneAnswerOpinion: resTuple[7].(bool),
+		IsFillingFinished: resTuple[8].(bool),
 	}
 
 	core.AppLogger.Println("Запрос в БД на получение названий информации о голосовании по Name выполнен успешно")
@@ -168,7 +174,10 @@ func AddVote(vote VoteModel) int{
 	var curId int
 
 	// создание нового канала, для данного голосования, если канал ещё не был добавлен
-	if ChanelIdInTable(vote.ChanelId){
+	resChanelIdInTable := ChanelIdInTable(vote.ChanelId)
+	core.AppLogger.Println("resChanelIdInTable ", resChanelIdInTable)
+
+	if !resChanelIdInTable{
 		AddNewChanel(vote.ChanelId)
 	}
 
@@ -203,6 +212,9 @@ func AddVote(vote VoteModel) int{
 	core.AppLogger.Println(resp.Error)
 	core.AppLogger.Println(vote.Variants)
 	core.AppLogger.Printf("Insert response (id %d)- Code: %d, Data: %v\n", curId, resp.Code, resp.Data)
+
+	resNewVoteInChanel := AddNewVoteInChanel(vote.ChanelId, curId)
+	core.AppLogger.Println("resNewVoteInChanel", resNewVoteInChanel)
 
 	return curId
 }
@@ -258,3 +270,19 @@ func DeleteVote(voteId int) bool{
 
 	return resultFlag
 }
+
+
+// изменение названия голосования
+func UpdateVoteName(voteId int, voteName string){
+	core.AppLogger.Printf("Запрос в БД на обновление имени голосования id %v\n", voteId)
+
+	req := tarantool.NewUpdateRequest(tableNames[0]).
+	Index("primary").
+	Key([]interface{}{voteId}).
+	Operations(tarantool.NewOperations().Assign(1, voteName))
+
+	DbConnection.Do(req).Get()
+}
+
+
+// 

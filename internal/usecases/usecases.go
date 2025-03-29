@@ -11,6 +11,35 @@ func CreateVote(userId string, chanelId string) int{
 	return voteId 
 }
 
+
+// установить название голосования
+func SetVoteName(userId string, voteId int, voteName string) bool{
+	vote := database.GetVoteInfoById(voteId)
+	
+	if vote.CreatorId != userId{
+		return false
+	}
+
+	database.UpdateVoteName(voteId, voteName)
+
+	return true
+}
+
+// установить описание голосования
+func SetVoteDesc(userId string, voteId int, voteDesc string){
+	
+}
+
+// установить варианты ответа голосования
+func SetVoteVariants(userId string, voteId int, voteVariants []string){
+	
+}
+
+// установить голосование с один вариантом ответа или несколькими
+func SetVoteOneAnswer(userId string, voteId int, isOneAnswerVote bool){
+	
+}
+
 // голосование пользователя за определённый вариант в конкретном голосовании
 func UserCastVoteByVoteId(userId int, voteId int, variant string){
 

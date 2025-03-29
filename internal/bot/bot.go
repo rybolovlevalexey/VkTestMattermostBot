@@ -1,14 +1,15 @@
 package bot
 
 import (
-	"log"
-	"strings"
 	"encoding/json"
+	"log"
 	"strconv"
+	"strings"
 
 	"github.com/mattermost/mattermost-server/v6/model"
-	
+
 	"VkTestMattermostBot/internal/config"
+	"VkTestMattermostBot/internal/core"
 	"VkTestMattermostBot/internal/database"
 	"VkTestMattermostBot/internal/usecases"
 )
@@ -23,6 +24,7 @@ type InfoToGenerateResponse struct{
 	voteId int;
 	chanelId string;
 	creatorId string;
+	updatingNameDone bool;
 }
 
 
@@ -99,8 +101,8 @@ func handleCommand(post *model.Post, client *model.Client4, botConfig config.Bot
 	}
 	
 	// запуск необходимых методов для выполнения логики приложения
-	flagDoneMainLogic, resultMainLogic, infoGenerateResp := mainLogic(post.Message, botConfig, post.UserId, post.ChannelId)
-	log.Println("MainLogic ", flagDoneMainLogic, resultMainLogic)
+	resultMainLogic, infoGenerateResp := mainLogic(post.Message, botConfig, post.UserId, post.ChannelId)
+	log.Println("MainLogic ", resultMainLogic)
 
 	// создание сообщения, отвечающего пользователю на его запрос
 	reply := &model.Post{
@@ -126,22 +128,38 @@ func generateResponse(message string, botConfig config.BotConfig, infoGenerateRe
 			return BotAnswers["help"]
 		case strings.Contains(message, "create"):  // получена команда на создание нового голосования
 			return "Создано голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + "\n\n" + BotAnswers["create"]
+		case strings.Contains(message, "votename"):  // получена команда на установку названия голосования
+			if infoGenerateResp.updatingNameDone{
+				return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " установлено название"
+			}
+			return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не было установлено название (ошибка прав доступа)"
+			
 		default:
 			return "" + message
 	}
 }
 
 // запуск необходимых функций в соответствии с полученным сообщением от пользователя
-func mainLogic(message string, botConfig config.BotConfig, userMatterMostId string, chanelId string) (bool, []database.VoteModel, InfoToGenerateResponse){
+func mainLogic(message string, botConfig config.BotConfig, 
+			   userMatterMostId string, chanelId string) ([]database.VoteModel, InfoToGenerateResponse){
 	var result []database.VoteModel
 	log.Println(message, botConfig.BotUserName, userMatterMostId)
 
 	switch {
 	case strings.Contains(message, "create"):
 		newVoteId := usecases.CreateVote(userMatterMostId, chanelId)
-		return true, result, InfoToGenerateResponse{voteId: newVoteId}
+		return result, InfoToGenerateResponse{voteId: newVoteId}
+	case strings.Contains(message, "votename"):
+		messageSplited := strings.Split(message, " ")
+		voteIdStr, voteName := messageSplited[2], strings.Join(messageSplited[3:], " ")
+		voteId, _ := strconv.Atoi(voteIdStr)
+		core.AppLogger.Println(voteName, voteId)
+
+		resSetVoteName := usecases.SetVoteName(userMatterMostId, voteId, voteName)
+
+		return result, InfoToGenerateResponse{updatingNameDone: resSetVoteName, voteId: voteId}
 	}
 
 
-	return true, result, InfoToGenerateResponse{}
+	return result, InfoToGenerateResponse{}
 }

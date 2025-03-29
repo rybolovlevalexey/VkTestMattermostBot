@@ -17,7 +17,7 @@ func AddNewChanel(chanelId string) ChanelModel{
 		[]int{},
 	})
 	resp, _ := DbConnection.Do(req).Get()
-
+	
 	if len(resp.Data) == 0{
 		result = ChanelModel{ChanelId: "-1", VotesList: []int{}}
 	} else {
@@ -33,6 +33,9 @@ func AddNewVoteInChanel(chanelId string, voteId int) bool {
 
 	reqSelect := tarantool.NewSelectRequest(tableNames[1]).Index("primary").Key([]interface{}{chanelId})
 	resp, _ := DbConnection.Do(reqSelect).Get()
+	if resp.Data == nil{
+		return false
+	}
 	if len(resp.Data) == 0{
 		return false
 	}
@@ -57,10 +60,14 @@ func ChanelIdInTable(chanelId string) bool{
 	req := tarantool.NewSelectRequest(tableNames[1]).Index("primary").Key([]interface{}{chanelId})
 	resp, _ := DbConnection.Do(req).Get()
 
-	if len(resp.Data) == 0{
+	if resp.Data == nil{
 		result = false
 	} else {
-		result = true
+		if len(resp.Data) == 0{
+			result = false
+		} else {
+			result = true
+		}
 	}
 
 	return result
