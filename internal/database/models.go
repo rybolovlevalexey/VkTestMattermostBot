@@ -13,6 +13,7 @@ type VoteModel struct{
 	ChanelId string;  // id канала mattermost, в котором создано данное голосование
 	CreatorId string; // id пользователя mattermost, создавшего голосование - только он может менять название, описание, варианты ответа
 	OneAnswerOpinion bool;  // true - голосование с одним вариантом ответа, false - голосование с несколькими вариантами ответа
+	IsFillingFinished bool;  // закончено ли наполнение голосования контентом -> пользователи могут отдавать свои голоса
 }
 
 
@@ -29,5 +30,4 @@ type UserModel struct{
 type ChanelModel struct{
 	ChanelId string;  // id канала в mattermost
 	VotesList []int;  // список id голосований данного канала
-	CreatingVoteNow bool;  // флаг о создании в данный момент какого-то голосования: true - создаётся голосование, другие не могут создаваться
 }
