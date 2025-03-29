@@ -9,7 +9,6 @@ import (
 	"VkTestMattermostBot/internal/database"
 
 	"github.com/tarantool/go-tarantool"
-	// "github.com/chilts/sid"
 )
 
 func main() {
@@ -36,11 +35,11 @@ func main() {
 	database.DbConnection = conn
 	appLogger.Printf("Подключение к базе данных %s:%s выполнено успешно\n", dbConfig.Host, dbConfig.Port)
 
-	// appLogger.Println("Запуск инизиализации базы данных")
-	// database.InitDataBase()
-	// appLogger.Println("Инициализация базы данных выполнена успешно")
+	appLogger.Println("Запуск инизиализации базы данных")
+	database.InitDataBase(database.ArgsInitDataBase{InitVote: true, InitChanels: true})
+	appLogger.Println("Инициализация базы данных выполнена успешно")
 
-
+	
 	// тестовое использование методов для работы с БД
 	//----------
 	/*
@@ -49,6 +48,8 @@ func main() {
 		Name: "новое крутое голосование",
 		Variants: map[string][]string{"very cool": []string{}, "not very cool": []string{}, },
 		ChanelId: "x123",
+		CreatorId: "p123",
+		OneAnswerOpinion: true,
 	})
 	log.Println(database.DeleteVote(1))
 	log.Println(database.GetVotesNames())

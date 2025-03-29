@@ -188,6 +188,8 @@ func AddVote(vote VoteModel) int{
 			vote.Variants, // variants
 			vote.IsActive, // is_active
 			vote.ChanelId, // chanel_id
+			vote.CreatorId,
+			vote.OneAnswerOpinion,
 		},
 	})
 	core.AppLogger.Printf("Insert response (id %d)- Code: %d, Data: %v\n", curId, resp.Code, resp.Data)
@@ -250,8 +252,26 @@ func DeleteVote(voteId int) bool{
 }
 
 
+// структура для описание, какие таблицы нужно инициализировать, а какие нет
+type ArgsInitDataBase struct{
+	InitVote bool;
+	InitChanels bool;
+}
+
 // инициализация базы данных: создание таблицы, задание типов полей, создание первичного индекса
-func InitDataBase(){
+func InitDataBase(args ArgsInitDataBase){
+	if args.InitVote{
+		initVoteTable()
+	}
+
+	if args.InitChanels{
+		initChanelsTable()
+	}
+}
+
+
+// инициализация таблицы vote
+func initVoteTable(){
 	// Создадим таблицу vote с информацией о голосованиях
 	core.AppLogger.Println("Запрос в БД на создание таблицы vote, если она ещё не существует")
     resp, err := DbConnection.Call("box.schema.space.create", []interface{}{
@@ -262,9 +282,9 @@ func InitDataBase(){
 		panic(err)
 	}
 	log.Println(resp.Data)
-	
-    // Зададим типы полей
-	core.AppLogger.Println("Запрос в БД на определение типов полей")
+
+	// Зададим типы полей
+	core.AppLogger.Println("Запрос в БД на определение типов полей в таблице vote")
     resp, err = DbConnection.Call("box.space.vote:format", [][]map[string]string{
         {
             {"name": "id", "type": "unsigned"},
@@ -273,13 +293,15 @@ func InitDataBase(){
 			{"name": "variants", "type": "map"},
 			{"name": "is_active", "type": "boolean"},
 			{"name": "chanel_id", "type": "string"},
+			{"name": "creator_id", "type": "string"},
+			{"name": "one_answer_opinion", "type": "boolean"},
         }})
 	if err != nil{
 		panic(err)
 	}
 	log.Println(resp.Data)
 
-    // Создадим необходиые индексы
+	// Создадим необходиые индексы
 	core.AppLogger.Println("Запрос в БД на создание первичного индекса по полю id")
     resp, err = DbConnection.Call("box.space.vote:create_index", []interface{}{
         "primary",
@@ -300,5 +322,46 @@ func InitDataBase(){
             "if_not_exists": true,
 			"unique": false,
 	}})
+	log.Println(resp.Data)
+}
+
+
+// инициализация таблицы chanels
+func initChanelsTable(){
+	// создание таблицы
+	core.AppLogger.Println("Запрос в БД на создание таблицы chanels, если она ещё не существует")
+    resp, err := DbConnection.Call("box.schema.space.create", []interface{}{
+        "chanels",
+        map[string]bool{"if_not_exists": true},
+	})
+	if err != nil{
+		panic(err)
+	}
+	log.Println(resp.Data)
+	
+    // определение полей
+	core.AppLogger.Println("Запрос в БД на определение типов полей в таблице chanels")
+    resp, err = DbConnection.Call("box.space.chanels:format", [][]map[string]string{
+        {
+            {"name": "chanel_id", "type": "string"},  // id канала в mattermost
+            {"name": "votes_list", "type": "array"},  // список id голосований в канале
+            {"name": "creating_vote_now", "type": "boolean"},  // флаг - ведётся ли сейчас создание какого-либо голосования
+        }})
+	if err != nil{
+		panic(err)
+	}
+	log.Println(resp.Data)
+
+	// создание индексов
+	core.AppLogger.Println("Запрос в БД на создание первичного индекса таблицы chanels по полю chanel_id")
+    resp, err = DbConnection.Call("box.space.chanels:create_index", []interface{}{
+        "primary",
+        map[string]interface{}{
+            "parts":         []string{"chanel_id"},
+            "if_not_exists": true,
+	}})
+	if err != nil{
+		panic(err)
+	}
 	log.Println(resp.Data)
 }

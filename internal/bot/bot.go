@@ -115,16 +115,17 @@ func generateResponse(message string, botConfig config.BotConfig) string {
 	message = strings.TrimSpace(message)
 
 	switch {
-	case strings.Contains(message, "help"):  
-		// получено сообщение с help
-		return BotAnswers["help"]
-	case strings.TrimSpace(strings.Replace(strings.Replace(message, botConfig.BotUserName, "", 1), "@", "", 1)) == "":  
-		// получено пустое сообщение
-		return BotAnswers["help"]
-	case strings.Contains(message, "create"):  // получена команда на создание нового голосования
-		return ""
-	default:
-		return "" + message
+		case strings.Contains(message, "help"):  
+			// получено сообщение с help
+			return BotAnswers["help"]
+		case strings.TrimSpace(strings.Replace(strings.Replace(message, botConfig.BotUserName, "", 1), "@", "", 1)) == "":  
+			// получено пустое сообщение
+			return BotAnswers["help"]
+		case strings.Contains(message, "create"):  // получена команда на создание нового голосования
+			
+			return ""
+		default:
+			return "" + message
 	}
 }
 
@@ -132,5 +133,12 @@ func generateResponse(message string, botConfig config.BotConfig) string {
 func mainLogic(message string, botConfig config.BotConfig, userMatterMostId string) (bool, []database.VoteModel){
 	var result []database.VoteModel
 	log.Println(message, botConfig.BotUserName, userMatterMostId)
+
+	switch {
+	case strings.Contains(message, "create"):
+		// проверить, что нет создоваемых голосований в канале
+		// если есть есть - стоп, если нет поставить режим создания голосования
+		
+	}
 	return true, result
 }
