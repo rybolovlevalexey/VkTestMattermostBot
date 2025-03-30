@@ -208,7 +208,7 @@ func FinishVote(voteId int) bool{
 	req := tarantool.NewUpdateRequest(tableNames[0]).
 	Index("primary").
 	Key([]interface{}{voteId}).
-	Operations(tarantool.NewOperations().Assign(5, false))
+	Operations(tarantool.NewOperations().Assign(4, false))
 
 	resp, _ := DbConnection.Do(req).Get()
 	core.AppLogger.Println(resp.SQLInfo)

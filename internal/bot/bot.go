@@ -15,9 +15,9 @@ import (
 )
 
 var BotCommands = []string{"create", "votename", "votedesc", "votevariants", "voteoneanswer", 
-						   "votestart", "cast", "check", "viewall", "", "", "", "", }
+						   "votestart", "cast", "check", "viewall", "stop", "delete"}
 var BotCommandsWithId = []string{"votename", "votedesc", "votevariants", "voteoneanswer", 
-							     "votestart", "cast", "check"}
+							     "votestart", "cast", "check", "stop", "delete"}
 
 
 type MattermostBot struct{
@@ -39,6 +39,8 @@ type InfoToGenerateResponse struct{
 	ViewVoteInfoDone map[string]bool;  // done - выполнено ли успешно, not_exist - не существует, from_another_chanel - из другого канала
 	NoVotesInChanel bool;  // в канале нет голосований
 	AllVotesInChanel []database.VoteModel;  // результат работы метода, возвращающего информацию обо всех голосованиях в канале
+	StopVoteDone bool;
+	DeleteVoteDone bool;
 }
 
 
@@ -221,11 +223,27 @@ func generateResponse(message string,
 			}
 			ansSt := "ИНФОРМАЦИЯ ОБО ВСЕХ ГОЛОСОВАНИЯХ В ДАННОМ КАНАЛЕ\n\n"
 			for _, voteInfo := range infoGenerateResp.AllVotesInChanel{
+				if voteInfo.Id < 0{
+					continue
+				}
 				//ansSt += "--------------------\n"
 				ansSt += createMessageAboutVote(voteInfo)
 				//ansSt += "--------------------\n"
 			}
 			return ansSt
+		
+		case strings.Contains(message, "stop"):
+			if infoGenerateResp.StopVoteDone{
+				return "Голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + " корректно остановлено"
+			}
+			return "Голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не остановлено" 
+		
+		case strings.Contains(message, "delete"):
+			if infoGenerateResp.DeleteVoteDone{
+				return "Голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + " корректно удалено"
+			}
+			return "Голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не удалено (его либо не существует в данном канале, либо вы не его создатель)"
+
 		default:
 			return "" + message
 	}
@@ -359,6 +377,14 @@ func mainLogic(message string,
 		}
 
 		return result, InfoToGenerateResponse{AllVotesInChanel: resViewAllVotesResults}
+	
+	case strings.Contains(message, "stop"):
+		resStopCurrentVote := usecases.StopCurrentVote(voteId, chanelId)
+		return result, InfoToGenerateResponse{StopVoteDone: resStopCurrentVote, voteId: voteId}
+	
+	case strings.Contains(message, "delete"):
+		resDeleteCurrentVote := usecases.DeleteCurrentVote(voteId, chanelId, userMatterMostId)
+		return result, InfoToGenerateResponse{DeleteVoteDone: resDeleteCurrentVote, voteId: voteId}
 	}
 
 

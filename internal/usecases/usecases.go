@@ -31,7 +31,7 @@ func SetVoteName(userId string, voteId int, voteName string) bool{
 func SetVoteDesc(userId string, voteId int, voteDesc string) bool{
 	vote := database.GetVoteInfoById(voteId)
 	
-	if vote.CreatorId != userId{
+	if vote.CreatorId != userId || !vote.IsActive{
 		return false
 	}
 
@@ -57,7 +57,7 @@ func SetVoteVariants(userId string, voteId int, voteVariants []string) bool{
 func SetVoteIsOneAnswer(userId string, voteId int, isOneAnswerVote bool) bool{
 	vote := database.GetVoteInfoById(voteId)
 	
-	if vote.CreatorId != userId{
+	if vote.CreatorId != userId || !vote.IsActive{
 		return false
 	}
 
@@ -146,15 +146,38 @@ func ViewAllVotesResults(chanelId string) []database.VoteModel{
 }
 
 // остановка конкретного голосования
-func StopCurrentVote(voteId int) bool{
-	var resultFlag = false
+func StopCurrentVote(voteId int, chanelId string) bool{
+	curVote := database.GetVoteInfoById(voteId)
+	if curVote.Id == -1{  // проверка на существование голосования
+		return false
+	}
+	if curVote.ChanelId != chanelId{ // проверка на то, что она из этого канала
+		return false
+	}
+	database.FinishVote(voteId)
 
-	return resultFlag
+	return true
 }
 
 // удаление конкретного голосования
-func DeleteCurrentVote(voteId int) bool{
-	var resultFlag = false
+func DeleteCurrentVote(voteId int, chanelId string, userId string) bool{
+	curVote := database.GetVoteInfoById(voteId)
+	if curVote.Id == -1{  // проверка на существование голосования
+		return false
+	}
+	if curVote.ChanelId != chanelId{ // проверка на то, что она из этого канала
+		return false
+	}
+	if curVote.CreatorId != userId{  // проверка, что запрос на удаление делает пользователь
+		return false
+	}
+	// удаление голосования
+	database.DeleteVote(voteId)
 
-	return resultFlag
+	// ПОДУМАТЬ: нужно ли сделать следующие функции
+	// удаление всех вариантов ответа данного голосования из таблицы vote_variants
+	// удаление данного голосования у всех пользователей
+	// удаление удаление данного голосования из канала
+
+	return true
 }
