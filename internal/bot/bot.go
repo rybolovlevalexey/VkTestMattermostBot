@@ -28,6 +28,7 @@ type InfoToGenerateResponse struct{
 	updatingDescDone bool;
 	updatingVarinatsDone bool;
 	updatingIsOneAnswerDone bool;
+	updatingVoteStart bool;
 }
 
 
@@ -122,6 +123,16 @@ func handleCommand(post *model.Post, client *model.Client4, botConfig config.Bot
 func generateResponse(message string, botConfig config.BotConfig, infoGenerateResp InfoToGenerateResponse) string {
 	message = strings.TrimSpace(message)
 
+	if strings.Contains(message, "votestart"){
+		curVoteId, _ := strconv.Atoi(strings.TrimSpace(strings.Split(message, " ")[2]))
+		curVote := database.GetVoteInfoById(curVoteId)
+
+		core.AppLogger.Println("curVote.Name curVote.Variants ", curVote.Name, curVote.Variants)
+		if curVote.Name == "" || len(curVote.Variants) < 2{
+			return "Голосование с id - " + strconv.Itoa(curVoteId) + " не готово к старту (не заполнена обязательная информация)"
+		}
+	}
+
 	switch {
 		case strings.Contains(message, "help"):  
 			// получено сообщение с help
@@ -151,7 +162,11 @@ func generateResponse(message string, botConfig config.BotConfig, infoGenerateRe
 				return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " установлено является ли голосование с одним вариантом ответа или с несколькими"
 			}
 			return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не установлено является ли голосование с одним вариантом ответа или с несколькими (ошибка прав доступа)"
-
+		case strings.Contains(message, "votestart"):
+			if infoGenerateResp.updatingVoteStart{
+				return "Голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + " начато"
+			}
+			return "Голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не начато (ошибка прав доступа)"
 		default:
 			return "" + message
 	}
@@ -219,6 +234,16 @@ func mainLogic(message string, botConfig config.BotConfig,
 		resSetVoteIsOneAnswer := usecases.SetVoteIsOneAnswer(userMatterMostId, voteId, voteOneAnswerBool)
 
 		return result, InfoToGenerateResponse{updatingIsOneAnswerDone: resSetVoteIsOneAnswer, voteId: voteId}
+	
+	case strings.Contains(message, "votestart"):
+		messageSplited := strings.Split(message, " ")
+		voteIdStr := messageSplited[2]
+		voteId, _ := strconv.Atoi(voteIdStr)
+		core.AppLogger.Println(voteId)
+
+		resVoteStart := usecases.StartVote(userMatterMostId, voteId)
+
+		return result, InfoToGenerateResponse{updatingVoteStart: resVoteStart, voteId: voteId}
 	}
 
 

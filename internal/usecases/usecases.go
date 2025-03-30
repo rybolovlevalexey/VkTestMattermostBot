@@ -64,6 +64,19 @@ func SetVoteIsOneAnswer(userId string, voteId int, isOneAnswerVote bool) bool{
 	return true
 }
 
+// начать голосование
+func StartVote(userId string, voteId int) bool{
+	vote := database.GetVoteInfoById(voteId)
+
+	if vote.CreatorId != userId || vote.Name == "" || len(vote.Variants) < 2{
+		return false
+	}
+
+	database.UpdateVoteReadyToStart(voteId)
+
+	return true
+}
+
 // голосование пользователя за определённый вариант в конкретном голосовании
 func UserCastVoteByVoteId(userId int, voteId int, variant string){
 
