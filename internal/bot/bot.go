@@ -14,7 +14,7 @@ import (
 	"VkTestMattermostBot/internal/usecases"
 )
 
-var BotCommands = []string{"create", "votename", "votedesc", "votevariants", "voteoneanswer", 
+var BotCommands = []string{"help", "create", "votename", "votedesc", "votevariants", "voteoneanswer", 
 						   "votestart", "cast", "check", "viewall", "stop", "delete"}
 var BotCommandsWithId = []string{"votename", "votedesc", "votevariants", "voteoneanswer", 
 							     "votestart", "cast", "check", "stop", "delete"}

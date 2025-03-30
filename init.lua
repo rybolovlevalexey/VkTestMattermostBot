@@ -1,5 +1,5 @@
 -- Открываем порт для доступа по iproto
-box.cfg({listen="127.0.0.1:3301"})
+box.cfg({listen="0.0.0.0:3301"})
 -- Создаём пользователя для подключения
 box.schema.user.create('storage', {password='passw0rd', if_not_exists=true})
 -- Даём все-все права
