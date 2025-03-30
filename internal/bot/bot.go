@@ -14,8 +14,10 @@ import (
 	"VkTestMattermostBot/internal/usecases"
 )
 
-var BotCommands = []string{"create", "votename", "votedesc", "votevariants", "voteoneanswer", "votestart", "cast", "", "", "", "", "", "", }
-var BotCommandsWithId = []string{"votename", "votedesc", "votevariants", "voteoneanswer", "votestart", "cast",}
+var BotCommands = []string{"create", "votename", "votedesc", "votevariants", "voteoneanswer", 
+						   "votestart", "cast", "check", "", "", "", "", "", }
+var BotCommandsWithId = []string{"votename", "votedesc", "votevariants", "voteoneanswer", 
+							     "votestart", "cast", "check"}
 
 
 type MattermostBot struct{
@@ -34,6 +36,7 @@ type InfoToGenerateResponse struct{
 	updatingIsOneAnswerDone bool;
 	updatingVoteStart bool;
 	UserCastVoteByVoteIdDone bool;
+	ViewVoteInfoDone map[string]bool;  // done - выполнено ли успешно, not_exist - не существует, from_another_chanel - из другого канала
 }
 
 
@@ -116,7 +119,7 @@ func handleCommand(post *model.Post, client *model.Client4, botConfig config.Bot
 	// создание сообщения, отвечающего пользователю на его запрос
 	reply := &model.Post{
 		ChannelId: post.ChannelId,
-		Message:   generateResponse(post.Message, botConfig, infoGenerateResp),
+		Message:   generateResponse(post.Message, botConfig, infoGenerateResp, resultMainLogic),
 	}
 
 	if _, _, err := client.CreatePost(reply); err != nil {
@@ -125,7 +128,10 @@ func handleCommand(post *model.Post, client *model.Client4, botConfig config.Bot
 }
 
 // генерация ответов в зависимости от сообщения пользователя и результатов выполнения логики приложения
-func generateResponse(message string, botConfig config.BotConfig, infoGenerateResp InfoToGenerateResponse) string {
+func generateResponse(message string, 
+					  botConfig config.BotConfig, 
+					  infoGenerateResp InfoToGenerateResponse, 
+					  resultMainLogic database.VoteModel) string {
 	message = strings.TrimSpace(message)
 	flagCommandInMessage := false
 
@@ -189,16 +195,39 @@ func generateResponse(message string, botConfig config.BotConfig, infoGenerateRe
 				return "Вы успешно проголосовали в голосовании с id - " + strconv.Itoa(infoGenerateResp.voteId)
 			}
 			return "Вы не смогли проголосовать в голосовании с id - " + strconv.Itoa(infoGenerateResp.voteId) + ". Скорее всего такого голосования в вашем канале не существует или вы уже проголосовали в указанном голосовании. "
-		
+		case strings.Contains(message, "check"):
+			if infoGenerateResp.ViewVoteInfoDone["done"]{
+				st := "Информация о голосовании с id - " + strconv.Itoa(infoGenerateResp.voteId) + ":\n" + 
+					  "Название - " + resultMainLogic.Name + "\n"
+				if len(resultMainLogic.Description) > 0{
+					st += "Описание - " + resultMainLogic.Description + "\n"
+				}
+				st += "Варианты ответа и количество пользователей за них проголосовавших:\n"
+				for key, value := range resultMainLogic.Variants{
+					st += key + " - " + strconv.Itoa(len(value)) + "\n"
+				}
+				if resultMainLogic.IsActive{
+					st += "Голосование ещё не окончено\n"
+				} else {
+					st += "Голосование уже завершено\n"
+				}
+				return st
+			}
+			if infoGenerateResp.ViewVoteInfoDone["not_exist"]{
+				return "Голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не существует"
+			}
+			return "В вашем канале нет голосования с id - " + strconv.Itoa(infoGenerateResp.voteId)
 		default:
 			return "" + message
 	}
 }
 
 // запуск необходимых функций в соответствии с полученным сообщением от пользователя
-func mainLogic(message string, botConfig config.BotConfig, 
-			   userMatterMostId string, chanelId string) ([]database.VoteModel, InfoToGenerateResponse){
-	var result []database.VoteModel
+func mainLogic(message string, 
+			   botConfig config.BotConfig, 
+			   userMatterMostId string, 
+			   chanelId string) (database.VoteModel, InfoToGenerateResponse){
+	var result database.VoteModel
 	log.Println(message, botConfig.BotUserName, userMatterMostId)
 
 	flagCommandInMessage := false
@@ -291,6 +320,28 @@ func mainLogic(message string, botConfig config.BotConfig,
 		variants := strings.Split(strings.Join(messageSplited[3:], " "), ";")
 		resUserCastVoteByVoteId := usecases.UserCastVoteByVoteId(userMatterMostId, voteId, chanelId, variants)
 		return result, InfoToGenerateResponse{UserCastVoteByVoteIdDone: resUserCastVoteByVoteId, voteId:  voteId}
+	
+	case strings.Contains(message, "check"):
+		resViewCurrentVoteResult := usecases.ViewCurrentVoteResult(voteId, chanelId)
+		
+		if resViewCurrentVoteResult.Id >= 0{
+			return resViewCurrentVoteResult, InfoToGenerateResponse{
+				ViewVoteInfoDone: map[string]bool{"done": true, "not_exist": false, "from_another_chanel": false}, 
+				voteId:  voteId,
+			}
+		}
+		if resViewCurrentVoteResult.Id == -1{
+			return result, InfoToGenerateResponse{
+				ViewVoteInfoDone: map[string]bool{"done": false, "not_exist": true, "from_another_chanel": false}, 
+				voteId:  voteId,
+			}
+		}
+		if resViewCurrentVoteResult.Id == -2{
+			return result, InfoToGenerateResponse{
+				ViewVoteInfoDone: map[string]bool{"done": false, "not_exist": false, "from_another_chanel": true}, 
+				voteId:  voteId,
+			}
+		}
 	}
 
 

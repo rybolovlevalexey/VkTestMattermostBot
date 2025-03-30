@@ -2,6 +2,7 @@ package usecases
 
 import (
 	// "VkTestMattermostBot/internal/core"
+	"VkTestMattermostBot/internal/core"
 	"VkTestMattermostBot/internal/database"
 )
 
@@ -108,8 +109,28 @@ func UserCastVoteByVoteId(userId string, voteId int, chanelId string, variants [
 }
 
 // посмотреть информацию по конкретному голосованию
-func ViewCurrentVoteResult(voteId int){
+func ViewCurrentVoteResult(voteId int, chanelId string) database.VoteModel{
+	flagVoteIdInDB := false
+	
+	// проверка, что голосование с таким id существует
+	for _, elem := range database.GetAllIds(){
+		if elem == voteId{
+			flagVoteIdInDB = true
+			break
+		}
+	}
+	if !flagVoteIdInDB{ // не существует голосования с таким id
+		return database.VoteModel{Id: -1,}
+	}
 
+	voteResult := database.GetVoteInfoById(voteId)
+	core.AppLogger.Println(voteResult)
+	// проверка что голосование принадлежит данному каналу, чтобы не показывать голосования созданные в других каналах
+	if voteResult.ChanelId != chanelId{
+		return database.VoteModel{Id: -2,}
+	}
+
+	return voteResult
 }
 
 // посмотреть все возможные голосования
