@@ -188,7 +188,7 @@ func generateResponse(message string, botConfig config.BotConfig, infoGenerateRe
 			if infoGenerateResp.UserCastVoteByVoteIdDone{
 				return "Вы успешно проголосовали в голосовании с id - " + strconv.Itoa(infoGenerateResp.voteId)
 			}
-			return "Вы не смогли проголосовать в голосовании с id - " + strconv.Itoa(infoGenerateResp.voteId) + ". Скорее всего такого голосования в вашем канале не существует. "
+			return "Вы не смогли проголосовать в голосовании с id - " + strconv.Itoa(infoGenerateResp.voteId) + ". Скорее всего такого голосования в вашем канале не существует или вы уже проголосовали в указанном голосовании. "
 		
 		default:
 			return "" + message

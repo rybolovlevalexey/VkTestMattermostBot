@@ -19,10 +19,8 @@ type VoteModel struct{
 
 // модель описывающая пользователей участвующих в голосованиях
 type UserModel struct{
-	Id int;
 	MattermostId string;  // id пользователя в Mattermost
-	Username string;  // логин пользователя
-	VotesInfo map[string]string;  // название голосования: вариант за который пользователь отдал свой голос
+	VotesUserDoneCast []int;  // список id голосований в которых пользователь уже отдал свой голос
 }
 
 

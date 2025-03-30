@@ -10,7 +10,7 @@ import (
 )
 
 var DbConnection *tarantool.Connection
-var tableNames = []string{"vote", "chanels", "vote_variants"}
+var tableNames = []string{"vote", "chanels", "vote_variants", "users"}
 
 
 // структура для описание, какие таблицы нужно инициализировать, а какие нет
@@ -18,6 +18,7 @@ type ArgsInitDataBase struct{
 	InitVote bool;
 	InitChanels bool;
 	InitVoteVariants bool;
+	InitUsersTable bool;
 }
 
 // инициализация базы данных: создание таблицы, задание типов полей, создание первичного индекса
@@ -32,6 +33,10 @@ func InitDataBase(args ArgsInitDataBase){
 
 	if args.InitVoteVariants{
 		initVoteVariantsTable()
+	}
+
+	if args.InitUsersTable{
+		initUsersTable()
 	}
 }
 
@@ -171,6 +176,48 @@ func initVoteVariantsTable(){
         "primary",
         map[string]interface{}{
             "parts":         []string{"id"},
+            "if_not_exists": true,
+	}})
+	if err != nil{
+		panic(err)
+	}
+	log.Println(resp.Data)
+}
+
+
+
+// инициализация таблицы с информацией о пользователях
+func initUsersTable(){
+	// создание таблицы
+	core.AppLogger.Println("Запрос в БД на создание таблицы users, если она ещё не существует")
+    resp, err := DbConnection.Call("box.schema.space.create", []interface{}{
+        tableNames[3],
+        map[string]bool{"if_not_exists": true},
+	})
+	if err != nil{
+		panic(err)
+	}
+	log.Println(resp.Data)
+
+	// определение полей
+	core.AppLogger.Println("Запрос в БД на определение типов полей в таблице vote_variants")
+    resp, err = DbConnection.Call(fmt.Sprintf("box.space.%s:format", tableNames[3]), 
+	[][]map[string]string{
+        {
+            {"name": "mattermost_id", "type": "string"},  // id пользователя из mattermost
+			{"name": "votes_user_done_cast", "type": "array"},  // список id голосований, в которых пользователь уже принял участие
+        }})
+	if err != nil{
+		panic(err)
+	}
+	log.Println(resp.Data)
+
+	// создание индексов
+	core.AppLogger.Println("Запрос в БД на создание первичного индекса таблицы users по полю id")
+    resp, err = DbConnection.Call(fmt.Sprintf("box.space.%s:create_index", tableNames[3]), []interface{}{
+        "primary",
+        map[string]interface{}{
+            "parts":         []string{"mattermost_id"},
             "if_not_exists": true,
 	}})
 	if err != nil{

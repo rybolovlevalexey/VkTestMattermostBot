@@ -36,7 +36,7 @@ func main() {
 	appLogger.Printf("Подключение к базе данных %s:%s выполнено успешно\n", dbConfig.Host, dbConfig.Port)
 
 	appLogger.Println("Запуск инизиализации базы данных")
-	database.InitDataBase(database.ArgsInitDataBase{InitVote: true, InitChanels: true, InitVoteVariants: true})
+	database.InitDataBase(database.ArgsInitDataBase{InitVote: true, InitChanels: true, InitVoteVariants: true, InitUsersTable: true})
 	appLogger.Println("Инициализация базы данных выполнена успешно")
 
 	

@@ -88,6 +88,13 @@ func UserCastVoteByVoteId(userId string, voteId int, chanelId string, variants [
 		return false
 	}
 
+	// проверка, что пользователь ещё не проголосовал в этом голосовании
+	for _, elem := range database.GetUserVotesDoneCast(userId){
+		if elem == voteId{
+			return false
+		}
+	}
+
 	for _, variant := range variants{
 		flagDone := database.AddUserCast(voteId, userId, variant)
 		if !flagDone{
@@ -95,7 +102,9 @@ func UserCastVoteByVoteId(userId string, voteId int, chanelId string, variants [
 		}
 	}
 
-	return true
+	flagDone := database.AddInUserListNewVoteDoneCast(userId, voteId)
+
+	return flagDone
 }
 
 // посмотреть информацию по конкретному голосованию
