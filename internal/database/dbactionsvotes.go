@@ -301,7 +301,7 @@ func UpdateVoteReadyToStart(voteId int){
 	req := tarantool.NewUpdateRequest(tableNames[0]).
 	Index("primary").
 	Key([]interface{}{voteId}).
-	Operations(tarantool.NewOperations().Assign(9, true))
+	Operations(tarantool.NewOperations().Assign(8, true))
 
 	DbConnection.Do(req).Get()
 }

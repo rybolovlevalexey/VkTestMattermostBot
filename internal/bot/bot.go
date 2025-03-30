@@ -14,6 +14,10 @@ import (
 	"VkTestMattermostBot/internal/usecases"
 )
 
+var BotCommands = []string{"create", "votename", "votedesc", "votevariants", "voteoneanswer", "votestart", "cast", "", "", "", "", "", "", }
+var BotCommandsWithId = []string{"votename", "votedesc", "votevariants", "voteoneanswer", "votestart", "cast",}
+
+
 type MattermostBot struct{
 	Client	*model.Client4;
 	WSclient 	*model.WebSocketClient;
@@ -29,6 +33,7 @@ type InfoToGenerateResponse struct{
 	updatingVarinatsDone bool;
 	updatingIsOneAnswerDone bool;
 	updatingVoteStart bool;
+	UserCastVoteByVoteIdDone bool;
 }
 
 
@@ -75,7 +80,7 @@ func handleEvents(wsClient *model.WebSocketClient, client *model.Client4, botCon
 func processEvent(event *model.WebSocketEvent, client *model.Client4, botConfig config.BotConfig) {
 	// Обрабатываем только новые сообщения
 	if event.EventType() != model.WebsocketEventPosted {
-		log.Println("Получено не новое сообщение")
+		// log.Println("Получено не новое сообщение")
 		return
 	}
 
@@ -89,7 +94,7 @@ func processEvent(event *model.WebSocketEvent, client *model.Client4, botConfig 
 	log.Println("ChannelId ", post.ChannelId)
 
 	if post.UserId == botConfig.BotUserID {
-		log.Println("Получено сообщение от самого бота")
+		// log.Println("Получено сообщение от самого бота")
 		return
 	}
 
@@ -122,6 +127,18 @@ func handleCommand(post *model.Post, client *model.Client4, botConfig config.Bot
 // генерация ответов в зависимости от сообщения пользователя и результатов выполнения логики приложения
 func generateResponse(message string, botConfig config.BotConfig, infoGenerateResp InfoToGenerateResponse) string {
 	message = strings.TrimSpace(message)
+	flagCommandInMessage := false
+
+	for _, command := range BotCommands{
+		if strings.Contains(message, command){
+			flagCommandInMessage = true
+			break
+		}
+	}
+
+	if !flagCommandInMessage{  // сообщении нет команды
+		return "В отправленном сообщении нет команды или название команды напечатно некорректно"
+	}
 
 	if strings.Contains(message, "votestart"){
 		curVoteId, _ := strconv.Atoi(strings.TrimSpace(strings.Split(message, " ")[2]))
@@ -167,6 +184,12 @@ func generateResponse(message string, botConfig config.BotConfig, infoGenerateRe
 				return "Голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + " начато"
 			}
 			return "Голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не начато (ошибка прав доступа)"
+		case strings.Contains(message, "cast"):
+			if infoGenerateResp.UserCastVoteByVoteIdDone{
+				return "Вы успешно проголосовали в голосовании с id - " + strconv.Itoa(infoGenerateResp.voteId)
+			}
+			return "Вы не смогли проголосовать в голосовании с id - " + strconv.Itoa(infoGenerateResp.voteId) + ". Скорее всего такого голосования в вашем канале не существует. "
+		
 		default:
 			return "" + message
 	}
@@ -178,36 +201,63 @@ func mainLogic(message string, botConfig config.BotConfig,
 	var result []database.VoteModel
 	log.Println(message, botConfig.BotUserName, userMatterMostId)
 
+	flagCommandInMessage := false
+
+	for _, command := range BotCommands{
+		if strings.Contains(message, command){
+			flagCommandInMessage = true
+			break
+		}
+	}
+
+	if !flagCommandInMessage{
+		return result, InfoToGenerateResponse{}
+	}
+
+	flagCommandWithIdInMessage := false
+	for _, command := range BotCommandsWithId{
+		if strings.Contains(message, command){
+			flagCommandWithIdInMessage = true
+			break
+		}
+	}
+
+	var messageSplited []string
+	var voteIdStr string
+	var voteId int
+
+	if flagCommandWithIdInMessage{
+		// @название_бота команда id_голосования <доп информация>
+		messageSplited = strings.Split(message, " ")
+		voteIdStr = messageSplited[2]
+		voteId, _ = strconv.Atoi(voteIdStr)
+	}
+	
+
 	switch {
 	case strings.Contains(message, "create"):
 		newVoteId := usecases.CreateVote(userMatterMostId, chanelId)
+		core.AppLogger.Println("create", newVoteId)
 		return result, InfoToGenerateResponse{voteId: newVoteId}
 	
 	case strings.Contains(message, "votename"):
-		messageSplited := strings.Split(message, " ")
-		voteIdStr, voteName := messageSplited[2], strings.Join(messageSplited[3:], " ")
-		voteId, _ := strconv.Atoi(voteIdStr)
-		core.AppLogger.Println(voteName, voteId)
+		voteName := strings.Join(messageSplited[3:], " ")
+		core.AppLogger.Println("votename", voteName, voteId)
 
 		resSetVoteName := usecases.SetVoteName(userMatterMostId, voteId, voteName)
 
 		return result, InfoToGenerateResponse{updatingNameDone: resSetVoteName, voteId: voteId}
 	
 	case strings.Contains(message, "votedesc"):
-		messageSplited := strings.Split(message, " ")
-		voteIdStr, voteDesc := messageSplited[2], strings.Join(messageSplited[3:], " ")
-		voteId, _ := strconv.Atoi(voteIdStr)
-		core.AppLogger.Println(voteDesc, voteId)
+		voteDesc := strings.Join(messageSplited[3:], " ")
+		core.AppLogger.Println("votedesc", voteDesc, voteId)
 
 		resSetVoteDesc := usecases.SetVoteDesc(userMatterMostId, voteId, voteDesc)
-
 		return result, InfoToGenerateResponse{updatingDescDone: resSetVoteDesc, voteId: voteId}
 	
 	case strings.Contains(message, "votevariants"):
-		messageSplited := strings.Split(message, " ")
-		voteIdStr, voteVariants := messageSplited[2], strings.Join(messageSplited[3:], " ")
-		voteId, _ := strconv.Atoi(voteIdStr)
-		core.AppLogger.Println(voteVariants, voteId)
+		voteVariants := strings.Join(messageSplited[3:], " ")
+		core.AppLogger.Println("votevariants", voteVariants, voteId)
 
 		voteVariantsList := make([]string, 0)
 		for _, elem := range strings.Split(voteVariants, ";"){
@@ -219,10 +269,8 @@ func mainLogic(message string, botConfig config.BotConfig,
 		return result, InfoToGenerateResponse{updatingVarinatsDone: resSetVoteVariants, voteId: voteId}
 	
 	case strings.Contains(message, "voteoneanswer"):
-		messageSplited := strings.Split(message, " ")
-		voteIdStr, voteOneAnswer := messageSplited[2], strings.Join(messageSplited[3:], " ")
-		voteId, _ := strconv.Atoi(voteIdStr)
-		core.AppLogger.Println(voteOneAnswer, voteId)
+		voteOneAnswer := strings.Join(messageSplited[3:], " ")
+		core.AppLogger.Println("voteoneanswer", voteOneAnswer, voteId)
 		
 		var voteOneAnswerBool bool
 		if strings.TrimSpace(voteOneAnswer) == "Y"{
@@ -232,18 +280,17 @@ func mainLogic(message string, botConfig config.BotConfig,
 		}
 			
 		resSetVoteIsOneAnswer := usecases.SetVoteIsOneAnswer(userMatterMostId, voteId, voteOneAnswerBool)
-
 		return result, InfoToGenerateResponse{updatingIsOneAnswerDone: resSetVoteIsOneAnswer, voteId: voteId}
 	
 	case strings.Contains(message, "votestart"):
-		messageSplited := strings.Split(message, " ")
-		voteIdStr := messageSplited[2]
-		voteId, _ := strconv.Atoi(voteIdStr)
-		core.AppLogger.Println(voteId)
-
+		core.AppLogger.Println("votestart", voteId)
 		resVoteStart := usecases.StartVote(userMatterMostId, voteId)
-
 		return result, InfoToGenerateResponse{updatingVoteStart: resVoteStart, voteId: voteId}
+
+	case strings.Contains(message, "cast"):
+		variants := strings.Split(strings.Join(messageSplited[3:], " "), ";")
+		resUserCastVoteByVoteId := usecases.UserCastVoteByVoteId(userMatterMostId, voteId, chanelId, variants)
+		return result, InfoToGenerateResponse{UserCastVoteByVoteIdDone: resUserCastVoteByVoteId, voteId:  voteId}
 	}
 
 

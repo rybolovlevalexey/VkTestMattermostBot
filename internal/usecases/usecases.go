@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	// "VkTestMattermostBot/internal/core"
 	"VkTestMattermostBot/internal/database"
 )
 
@@ -78,8 +79,23 @@ func StartVote(userId string, voteId int) bool{
 }
 
 // голосование пользователя за определённый вариант в конкретном голосовании
-func UserCastVoteByVoteId(userId int, voteId int, variant string){
+// variants - может состоять и из одной строки
+func UserCastVoteByVoteId(userId string, voteId int, chanelId string, variants []string) bool{
+	vote := database.GetVoteInfoById(voteId)
+	// проверка, что есть такое голосование, что оно принадлежит данному каналу и 
+	// что голосование запущено (наполнено контентом и не остановлено)
+	if vote.Id == -1 || vote.ChanelId != chanelId || !vote.IsFillingFinished || !vote.IsActive{
+		return false
+	}
 
+	for _, variant := range variants{
+		flagDone := database.AddUserCast(voteId, userId, variant)
+		if !flagDone{
+			return false
+		}
+	}
+
+	return true
 }
 
 // посмотреть информацию по конкретному голосованию

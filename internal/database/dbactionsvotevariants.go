@@ -95,12 +95,22 @@ func GetVoteVariant(voteId int) map[string][]string{
 func AddUserCast(voteId int, userId string, variantName string) bool{
 	var result bool
 
-	getReq := tarantool.NewSelectRequest(tableNames[2]).
-    Key([]interface{}{voteId, variantName})
+	//getReq := tarantool.NewSelectRequest(tableNames[2]).
+    //Key([]interface{}{voteId, variantName})
+		
+	getReq := tarantool.NewSelectRequest(tableNames[2]).Iterator(tarantool.IterAll)
 
 	getResp, _ := DbConnection.Do(getReq).Get()
-	core.AppLogger.Println(getResp.Data)
-	record := getResp.Data[0].([]interface{})
+	core.AppLogger.Println(getResp.Data, voteId, variantName)
+
+	var record []interface{}
+
+	for _, line := range getResp.Data{
+		curRec := line.([]interface{})
+		if int(curRec[1].(uint64)) == voteId && curRec[2].(string) == variantName{
+			record = curRec
+		}
+	}
 
 	// Обновляем массив
 	voters := record[3].([]interface{})
@@ -125,6 +135,7 @@ func AddUserCast(voteId int, userId string, variantName string) bool{
 		})
 
 	DbConnection.Do(updateReq).Get()
-
+	
+	result = true
 	return result
 }
