@@ -177,12 +177,4 @@ func initVoteVariantsTable(){
 		panic(err)
 	}
 	log.Println(resp.Data)
-
-	resp, _ = DbConnection.Call(fmt.Sprintf("box.space.%s:create_index", tableNames[2]), []interface{}{
-        "index_by_vote_id_and_variant_name",
-        map[string]interface{}{
-            "parts":         []string{"vote_id", "variant_name"},
-            "if_not_exists": true,
-	}})
-	log.Println(resp.Data)
 }

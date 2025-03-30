@@ -36,7 +36,7 @@ func main() {
 	appLogger.Printf("Подключение к базе данных %s:%s выполнено успешно\n", dbConfig.Host, dbConfig.Port)
 
 	appLogger.Println("Запуск инизиализации базы данных")
-	database.InitDataBase(database.ArgsInitDataBase{InitVote: true, InitChanels: true})
+	database.InitDataBase(database.ArgsInitDataBase{InitVote: true, InitChanels: true, InitVoteVariants: true})
 	appLogger.Println("Инициализация базы данных выполнена успешно")
 
 	
@@ -62,6 +62,12 @@ func main() {
 	*/
 
 	// database.AddNewVoteInChanel("chanelIDddddddddd", 133)
+	// log.Println(database.GetAllIds())
+	// database.AddNewVariant(1, "крутой вариант")
+	// database.AddNewVariant(1, "не менее крутой вариант")
+	// log.Println(database.GetAllIds())
+	// database.AddUserCast(1, "alexeyID2", "крутой вариант")
+	// log.Println(database.GetVoteVariant(1))
 	//----------
 
 	// Создание и запуск бота

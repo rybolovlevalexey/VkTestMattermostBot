@@ -1,8 +1,6 @@
 package database
 
 import (
-	"fmt"
-
 	"VkTestMattermostBot/internal/core"
 
 	"github.com/tarantool/go-tarantool"
@@ -79,7 +77,7 @@ func GetVotesNames() []string{
 // получение информации о голосовании по id
 func GetVoteInfoById(voteId int) VoteModel{
 	var resultVote VoteModel
-	core.AppLogger.Println("Запрос в БД на получение названий информации о голосовании по Id")
+	core.AppLogger.Println("Запрос в БД на получение информации о голосовании по Id")
 
 	req := tarantool.NewSelectRequest(tableNames[0]).Index("primary").Key([]interface{}{voteId})
 	resp, _ := DbConnection.Do(req).Get()
@@ -89,20 +87,7 @@ func GetVoteInfoById(voteId int) VoteModel{
 	}
 
 	resTuple := resp.Data[0].([]interface{})
-	variants := make(map[string][]string)
-
-	if vars, ok := resTuple[3].(map[interface{}][]interface{}); ok {
-		for key, val := range vars{
-			strKey := fmt.Sprintf("%v", key)
-			strValues := make([]string, len(val))
-
-			for i, v := range val{
-				strValues[i] = fmt.Sprintf("%v", v)
-			}
-			
-			variants[strKey] = strValues
-		}
-	}
+	variants := GetVoteVariant(voteId)
 
 	resultVote = VoteModel{
 		Id: int(resTuple[0].(uint64)),
@@ -116,7 +101,7 @@ func GetVoteInfoById(voteId int) VoteModel{
 		IsFillingFinished: resTuple[8].(bool),
 	}
 
-	core.AppLogger.Println("Запрос в БД на получение названий информации о голосовании по Id выполнен успешно")
+	core.AppLogger.Println("Запрос в БД на получение информации о голосовании по Id выполнен успешно")
 
 	return resultVote
 }
@@ -135,20 +120,7 @@ func GetVoteInfoByName(voteName string) VoteModel{
 	}
 
 	resTuple := resp.Data[0].([]interface{})
-	variants := make(map[string][]string)
-
-	if vars, ok := resTuple[3].(map[interface{}][]interface{}); ok {
-		for key, val := range vars{
-			strKey := fmt.Sprintf("%v", key)
-			strValues := make([]string, len(val))
-
-			for i, v := range val{
-				strValues[i] = fmt.Sprintf("%v", v)
-			}
-			
-			variants[strKey] = strValues
-		}
-	}
+	variants := GetVoteVariant(int(resTuple[0].(uint64)))
 
 	resultVote = VoteModel{
 		Id: int(resTuple[0].(uint64)),
@@ -302,17 +274,10 @@ func UpdateVoteDesc(voteId int, voteDesc string){
 func UpdateVoteVariants(voteId int, voteVariants []string){
 	core.AppLogger.Printf("Запрос в БД на обновление вариантов ответа голосования id %v\n", voteId)
 
-	voteVariantsMap := make(map[string][]string)
 	for _, elem := range voteVariants{
-		voteVariantsMap[elem] = []string{}
+		core.AppLogger.Printf("AddNewVariant элемент = %s", elem)
+		AddNewVariant(voteId, elem)
 	}
-
-	req := tarantool.NewUpdateRequest(tableNames[0]).
-	Index("primary").
-	Key([]interface{}{voteId}).
-	Operations(tarantool.NewOperations().Assign(3, voteVariantsMap))
-
-	DbConnection.Do(req).Get()
 }
 
 
@@ -324,6 +289,19 @@ func UpdateVoteIsOneAnswer(voteId int, isOneAnswerVote bool){
 	Index("primary").
 	Key([]interface{}{voteId}).
 	Operations(tarantool.NewOperations().Assign(8, isOneAnswerVote))
+
+	DbConnection.Do(req).Get()
+}
+
+
+// установка флага о том, что голосование готово к запуску, в положение true
+func UpdateVoteReadyToStart(voteId int){
+	core.AppLogger.Printf("Запрос в БД на старт голосования id %v\n", voteId)
+
+	req := tarantool.NewUpdateRequest(tableNames[0]).
+	Index("primary").
+	Key([]interface{}{voteId}).
+	Operations(tarantool.NewOperations().Assign(9, true))
 
 	DbConnection.Do(req).Get()
 }
