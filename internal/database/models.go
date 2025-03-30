@@ -31,3 +31,11 @@ type ChanelModel struct{
 	ChanelId string;  // id канала в mattermost
 	VotesList []int;  // список id голосований данного канала
 }
+
+// модель для описания варианта ответа в конкретном голосовании
+type VoteVariantModel struct{
+	Id int;  // id записи
+	VoteId int; // id голосования
+	VariantName string;  // название варианта
+	UsersIdsCastVariant []string;  // список id пользователей которые проголосовали за данный вариант
+}

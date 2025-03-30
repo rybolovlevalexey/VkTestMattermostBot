@@ -10,13 +10,14 @@ import (
 )
 
 var DbConnection *tarantool.Connection
-var tableNames = []string{"vote", "chanels"}
+var tableNames = []string{"vote", "chanels", "vote_variants"}
 
 
 // структура для описание, какие таблицы нужно инициализировать, а какие нет
 type ArgsInitDataBase struct{
 	InitVote bool;
 	InitChanels bool;
+	InitVoteVariants bool;
 }
 
 // инициализация базы данных: создание таблицы, задание типов полей, создание первичного индекса
@@ -27,6 +28,10 @@ func InitDataBase(args ArgsInitDataBase){
 
 	if args.InitChanels{
 		initChanelsTable()
+	}
+
+	if args.InitVoteVariants{
+		initVoteVariantsTable()
 	}
 }
 
@@ -128,5 +133,56 @@ func initChanelsTable(){
 	if err != nil{
 		panic(err)
 	}
+	log.Println(resp.Data)
+}
+
+
+// инициализация таблицы с вариантыми голосования
+func initVoteVariantsTable(){
+	// создание таблицы
+	core.AppLogger.Println("Запрос в БД на создание таблицы vote_variants, если она ещё не существует")
+    resp, err := DbConnection.Call("box.schema.space.create", []interface{}{
+        tableNames[2],
+        map[string]bool{"if_not_exists": true},
+	})
+	if err != nil{
+		panic(err)
+	}
+	log.Println(resp.Data)
+
+	// определение полей
+	core.AppLogger.Println("Запрос в БД на определение типов полей в таблице vote_variants")
+    resp, err = DbConnection.Call(fmt.Sprintf("box.space.%s:format", tableNames[2]), 
+	[][]map[string]string{
+        {
+            {"name": "id", "type": "unsigned"},  // id записи
+            {"name": "vote_id", "type": "unsigned"},  // id голосования
+			{"name": "variant_name", "type": "string"},  // название варианта информация, о котором в этой строке
+			{"name": "users_ids_cast_variant", "type": "array"},  // список id пользователей, которые отдали свой голос за этот вариант
+        }})
+	if err != nil{
+		panic(err)
+	}
+	log.Println(resp.Data)
+
+	// создание индексов
+	core.AppLogger.Println("Запрос в БД на создание первичного индекса таблицы vote_variants по полю id")
+    resp, err = DbConnection.Call(fmt.Sprintf("box.space.%s:create_index", tableNames[2]), []interface{}{
+        "primary",
+        map[string]interface{}{
+            "parts":         []string{"id"},
+            "if_not_exists": true,
+	}})
+	if err != nil{
+		panic(err)
+	}
+	log.Println(resp.Data)
+
+	resp, _ = DbConnection.Call(fmt.Sprintf("box.space.%s:create_index", tableNames[2]), []interface{}{
+        "index_by_vote_id_and_variant_name",
+        map[string]interface{}{
+            "parts":         []string{"vote_id", "variant_name"},
+            "if_not_exists": true,
+	}})
 	log.Println(resp.Data)
 }
