@@ -68,6 +68,7 @@ func main() {
 	// log.Println(database.GetAllIds())
 	// database.AddUserCast(1, "alexeyID2", "крутой вариант")
 	// log.Println(database.GetVoteVariant(1))
+	// core.AppLogger.Println(database.GetAllVoteIdsInChanel("1kwwosu6gbxfh6y7xnmemtsh"))
 	//----------
 
 	// Создание и запуск бота

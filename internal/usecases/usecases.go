@@ -134,8 +134,15 @@ func ViewCurrentVoteResult(voteId int, chanelId string) database.VoteModel{
 }
 
 // посмотреть все возможные голосования
-func ViewAllVotesResults(){
+func ViewAllVotesResults(chanelId string) []database.VoteModel{
+	idsInChanelList := database.GetAllVoteIdsInChanel(chanelId)
+	result := []database.VoteModel{} 
+	
+	for _, elem := range idsInChanelList{
+		result = append(result, ViewCurrentVoteResult(elem, chanelId))
+	}
 
+	return result
 }
 
 // остановка конкретного голосования

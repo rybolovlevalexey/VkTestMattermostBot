@@ -72,3 +72,24 @@ func ChanelIdInTable(chanelId string) bool{
 
 	return result
 }
+
+
+// получение списка всех id голосований, которые есть в данном канале
+func GetAllVoteIdsInChanel(chanelId string) []int{
+	req := tarantool.NewSelectRequest(tableNames[1]).Index("primary").Key([]interface{}{chanelId})
+	resp, _ := DbConnection.Do(req).Get()
+
+	if resp.Data == nil{
+		return []int{}
+	}
+	if len(resp.Data) == 0{
+		return []int{}
+	}
+
+	voteIdsList := []int{}
+	for _, elem := range resp.Data[0].([]interface{})[1].([]interface{}){
+		voteIdsList = append(voteIdsList, int(elem.(uint64)))
+	}
+
+	return voteIdsList
+}

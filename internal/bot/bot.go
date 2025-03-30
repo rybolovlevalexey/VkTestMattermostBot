@@ -15,7 +15,7 @@ import (
 )
 
 var BotCommands = []string{"create", "votename", "votedesc", "votevariants", "voteoneanswer", 
-						   "votestart", "cast", "check", "", "", "", "", "", }
+						   "votestart", "cast", "check", "viewall", "", "", "", "", }
 var BotCommandsWithId = []string{"votename", "votedesc", "votevariants", "voteoneanswer", 
 							     "votestart", "cast", "check"}
 
@@ -37,6 +37,8 @@ type InfoToGenerateResponse struct{
 	updatingVoteStart bool;
 	UserCastVoteByVoteIdDone bool;
 	ViewVoteInfoDone map[string]bool;  // done - выполнено ли успешно, not_exist - не существует, from_another_chanel - из другого канала
+	NoVotesInChanel bool;  // в канале нет голосований
+	AllVotesInChanel []database.VoteModel;  // результат работы метода, возвращающего информацию обо всех голосованиях в канале
 }
 
 
@@ -160,63 +162,70 @@ func generateResponse(message string,
 		case strings.Contains(message, "help"):  
 			// получено сообщение с help
 			return BotAnswers["help"]
+		
 		case strings.TrimSpace(strings.Replace(strings.Replace(message, botConfig.BotUserName, "", 1), "@", "", 1)) == "":  
 			// получено пустое сообщение
 			return BotAnswers["help"]
+		
 		case strings.Contains(message, "create"):  // получена команда на создание нового голосования
 			return "Создано голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + "\n\n" + BotAnswers["create"]
+		
 		case strings.Contains(message, "votename"):  // получена команда на установку названия голосования
 			if infoGenerateResp.updatingNameDone{
 				return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " установлено название"
 			}
 			return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не было установлено название (ошибка прав доступа)"
+		
 		case strings.Contains(message, "votedesc"):
 			if infoGenerateResp.updatingDescDone{
 				return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " установлено описание"
 			}
 			return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не установлено описание (ошибка прав доступа)"
+		
 		case strings.Contains(message, "votevariants"):
 			if infoGenerateResp.updatingVarinatsDone{
 				return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " установлены варианты ответа"
 			}
 			return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не установлены варианты ответа (ошибка прав доступа)"
+		
 		case strings.Contains(message, "voteoneanswer"):
 			if infoGenerateResp.updatingIsOneAnswerDone{
 				return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " установлено является ли голосование с одним вариантом ответа или с несколькими"
 			}
 			return "У голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не установлено является ли голосование с одним вариантом ответа или с несколькими (ошибка прав доступа)"
+		
 		case strings.Contains(message, "votestart"):
 			if infoGenerateResp.updatingVoteStart{
 				return "Голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + " начато"
 			}
 			return "Голосование с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не начато (ошибка прав доступа)"
+		
 		case strings.Contains(message, "cast"):
 			if infoGenerateResp.UserCastVoteByVoteIdDone{
 				return "Вы успешно проголосовали в голосовании с id - " + strconv.Itoa(infoGenerateResp.voteId)
 			}
 			return "Вы не смогли проголосовать в голосовании с id - " + strconv.Itoa(infoGenerateResp.voteId) + ". Скорее всего такого голосования в вашем канале не существует или вы уже проголосовали в указанном голосовании. "
+		
 		case strings.Contains(message, "check"):
 			if infoGenerateResp.ViewVoteInfoDone["done"]{
-				st := "Информация о голосовании с id - " + strconv.Itoa(infoGenerateResp.voteId) + ":\n" + 
-					  "Название - " + resultMainLogic.Name + "\n"
-				if len(resultMainLogic.Description) > 0{
-					st += "Описание - " + resultMainLogic.Description + "\n"
-				}
-				st += "Варианты ответа и количество пользователей за них проголосовавших:\n"
-				for key, value := range resultMainLogic.Variants{
-					st += key + " - " + strconv.Itoa(len(value)) + "\n"
-				}
-				if resultMainLogic.IsActive{
-					st += "Голосование ещё не окончено\n"
-				} else {
-					st += "Голосование уже завершено\n"
-				}
-				return st
+				return createMessageAboutVote(resultMainLogic)
 			}
 			if infoGenerateResp.ViewVoteInfoDone["not_exist"]{
 				return "Голосования с id - " + strconv.Itoa(infoGenerateResp.voteId) + " не существует"
 			}
 			return "В вашем канале нет голосования с id - " + strconv.Itoa(infoGenerateResp.voteId)
+		
+		case strings.Contains(message, "viewall"):
+			if infoGenerateResp.NoVotesInChanel{
+				return "В вашем канале на данный момент нет ни одного голосования"
+			}
+			ansSt := "ИНФОРМАЦИЯ ОБО ВСЕХ ГОЛОСОВАНИЯХ В ДАННОМ КАНАЛЕ\n\n"
+			for _, voteInfo := range infoGenerateResp.AllVotesInChanel{
+				//ansSt += "--------------------\n"
+				ansSt += createMessageAboutVote(voteInfo)
+				//ansSt += "--------------------\n"
+			}
+			return ansSt
 		default:
 			return "" + message
 	}
@@ -342,6 +351,14 @@ func mainLogic(message string,
 				voteId:  voteId,
 			}
 		}
+	
+	case strings.Contains(message, "viewall"):
+		resViewAllVotesResults := usecases.ViewAllVotesResults(chanelId)
+		if len(resViewAllVotesResults) == 0{
+			return result, InfoToGenerateResponse{NoVotesInChanel: true}
+		}
+
+		return result, InfoToGenerateResponse{AllVotesInChanel: resViewAllVotesResults}
 	}
 
 
