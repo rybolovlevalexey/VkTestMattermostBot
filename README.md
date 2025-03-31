@@ -13,15 +13,28 @@
 5. После старта голосования его редактирование запрещено
 
 
-
-
 ### Требования
 - Установленный Docker
 - Docker добавлен в группу пользователя либо запускаются через sudo
 
-### Запуск
+### Подготовка проекта к запуску
 ```bash
 git clone https://github.com/rybolovlevalexey/VkTestMattermostBot
 cd VkTestMattermostBot
-docker-compose up -d --build
+```
+
+### Запуск mattermost и tarantool
+```bash
+docker-compose up --build mattermost tarantool
+```
+
+
+### Перед запуском программы на go необходимо:
+- Зарегистрировать бота в mattermost
+- Добавить его в канал
+- Создать в корне по проекта файл .env
+- В файл .env поместить токен бота mattermost
+
+```bash
+go run main.go
 ```

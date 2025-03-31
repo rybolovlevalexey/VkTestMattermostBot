@@ -3,7 +3,7 @@ package database
 import (
 	"VkTestMattermostBot/internal/core"
 
-	"github.com/tarantool/go-tarantool"
+	"github.com/tarantool/go-tarantool/v2"
 )
 
 // добавление нового варианта для данного голосования
@@ -28,7 +28,7 @@ func AddNewVariant(voteId int, variantName string){
     })
 	
 	resp, _ := DbConnection.Do(insertReq).Get()
-	core.AppLogger.Println("AddNewVariant ", resp.Data, resp.Code, resp.SQLInfo)
+	core.AppLogger.Println("AddNewVariant ", resp)
 }
 
 
@@ -42,11 +42,11 @@ func GetAllIds() []int{
 		Key([]interface{}{}) // пустой ключ для выбора всех записей
 	resp, _ := DbConnection.Do(req).Get()
 
-	if resp.Data == nil{
+	if resp == nil{
 		return []int{}
 	}
 
-	for _, tuple := range resp.Data {
+	for _, tuple := range resp {
 		fields, ok := tuple.([]interface{})
 		if !ok || len(fields) == 0 {
 			continue
@@ -67,12 +67,12 @@ func GetVoteVariant(voteId int) map[string][]string{
 	req := tarantool.NewSelectRequest(tableNames[2]).Key([]interface{}{})
 	resp, _ := DbConnection.Do(req).Get()
 	
-	if resp.Data == nil{
+	if resp == nil{
 		return map[string][]string{}
 	}
 
 	res := make(map[string][]string)
-	for _, line := range resp.Data{
+	for _, line := range resp{
 		tuple := line.([]interface{})
 		
 		if int(tuple[1].(uint64)) != voteId {
@@ -101,11 +101,11 @@ func AddUserCast(voteId int, userId string, variantName string) bool{
 	getReq := tarantool.NewSelectRequest(tableNames[2]).Iterator(tarantool.IterAll)
 
 	getResp, _ := DbConnection.Do(getReq).Get()
-	core.AppLogger.Println(getResp.Data, voteId, variantName)
+	core.AppLogger.Println(getResp, voteId, variantName)
 
 	var record []interface{}
 
-	for _, line := range getResp.Data{
+	for _, line := range getResp{
 		curRec := line.([]interface{})
 		if int(curRec[1].(uint64)) == voteId && curRec[2].(string) == variantName{
 			record = curRec

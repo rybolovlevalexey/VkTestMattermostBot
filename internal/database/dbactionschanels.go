@@ -3,7 +3,7 @@ package database
 import (
 	"VkTestMattermostBot/internal/core"
 
-	"github.com/tarantool/go-tarantool"
+	"github.com/tarantool/go-tarantool/v2"
 )
 
 
@@ -18,7 +18,7 @@ func AddNewChanel(chanelId string) ChanelModel{
 	})
 	resp, _ := DbConnection.Do(req).Get()
 	
-	if len(resp.Data) == 0{
+	if len(resp) == 0{
 		result = ChanelModel{ChanelId: "-1", VotesList: []int{}}
 	} else {
 		result = ChanelModel{ChanelId: chanelId, VotesList: []int{}}
@@ -33,21 +33,21 @@ func AddNewVoteInChanel(chanelId string, voteId int) bool {
 
 	reqSelect := tarantool.NewSelectRequest(tableNames[1]).Index("primary").Key([]interface{}{chanelId})
 	resp, _ := DbConnection.Do(reqSelect).Get()
-	if resp.Data == nil{
+	if resp == nil{
 		return false
 	}
-	if len(resp.Data) == 0{
+	if len(resp) == 0{
 		return false
 	}
 	
-	votesIdList := resp.Data[0].([]interface{})[1].([]interface{}) // получение исходного списка
+	votesIdList := resp[0].([]interface{})[1].([]interface{}) // получение исходного списка
 	votesIdList = append(votesIdList, voteId)  // добавление нового id
 	
 
 	reqUpdate := tarantool.NewUpdateRequest(tableNames[1]).Index("primary").Key([]interface{}{chanelId}).Operations(
 		tarantool.NewOperations().Assign(1, votesIdList))
 	resp, _ = DbConnection.Do(reqUpdate).Get()
-	core.AppLogger.Println(resp.Data)
+	core.AppLogger.Println(resp)
 	return true
 }
 
@@ -60,10 +60,10 @@ func ChanelIdInTable(chanelId string) bool{
 	req := tarantool.NewSelectRequest(tableNames[1]).Index("primary").Key([]interface{}{chanelId})
 	resp, _ := DbConnection.Do(req).Get()
 
-	if resp.Data == nil{
+	if resp == nil{
 		result = false
 	} else {
-		if len(resp.Data) == 0{
+		if len(resp) == 0{
 			result = false
 		} else {
 			result = true
@@ -79,15 +79,15 @@ func GetAllVoteIdsInChanel(chanelId string) []int{
 	req := tarantool.NewSelectRequest(tableNames[1]).Index("primary").Key([]interface{}{chanelId})
 	resp, _ := DbConnection.Do(req).Get()
 
-	if resp.Data == nil{
+	if resp == nil{
 		return []int{}
 	}
-	if len(resp.Data) == 0{
+	if len(resp) == 0{
 		return []int{}
 	}
 
 	voteIdsList := []int{}
-	for _, elem := range resp.Data[0].([]interface{})[1].([]interface{}){
+	for _, elem := range resp[0].([]interface{})[1].([]interface{}){
 		voteIdsList = append(voteIdsList, int(elem.(uint64)))
 	}
 

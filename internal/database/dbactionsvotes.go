@@ -3,7 +3,7 @@ package database
 import (
 	"VkTestMattermostBot/internal/core"
 
-	"github.com/tarantool/go-tarantool"
+	"github.com/tarantool/go-tarantool/v2"
 )
 
 
@@ -23,7 +23,7 @@ func GetVotesIds() []int{
 	}
 
 	// Извлекаем ID
-	for _, tuple := range resp.Data {
+	for _, tuple := range resp {
 		// Проверяем тип данных
 		fields, ok := tuple.([]interface{})
 		if !ok || len(fields) == 0 {
@@ -55,7 +55,7 @@ func GetVotesNames() []string{
 	resp, _ := DbConnection.Do(req).Get()
 
 	// Извлекаем поле namr
-	for _, tuple := range resp.Data {
+	for _, tuple := range resp {
 		// Проверяем тип данных
 		fields, ok := tuple.([]interface{})
 		if !ok || len(fields) == 0 {
@@ -82,11 +82,11 @@ func GetVoteInfoById(voteId int) VoteModel{
 	req := tarantool.NewSelectRequest(tableNames[0]).Index("primary").Key([]interface{}{voteId})
 	resp, _ := DbConnection.Do(req).Get()
 	
-	if len(resp.Data) == 0{
+	if len(resp) == 0{
 		return VoteModel{Id: -1,}
 	}
 
-	resTuple := resp.Data[0].([]interface{})
+	resTuple := resp[0].([]interface{})
 	variants := GetVoteVariant(voteId)
 
 	resultVote = VoteModel{
@@ -115,11 +115,11 @@ func GetVoteInfoByName(voteName string) VoteModel{
 	req := tarantool.NewSelectRequest(tableNames[0]).Index("name_index").Key([]interface{}{voteName})
 	resp, _ := DbConnection.Do(req).Get()
 	
-	if len(resp.Data) == 0{
+	if len(resp) == 0{
 		return VoteModel{Id: -1,}
 	}
 
-	resTuple := resp.Data[0].([]interface{})
+	resTuple := resp[0].([]interface{})
 	variants := GetVoteVariant(int(resTuple[0].(uint64)))
 
 	resultVote = VoteModel{
@@ -181,9 +181,8 @@ func AddVote(vote VoteModel) int{
     })
 	
 	resp, _ := DbConnection.Do(insertReq).Get()
-	core.AppLogger.Println(resp.Error)
 	core.AppLogger.Println(vote.Variants)
-	core.AppLogger.Printf("Insert response (id %d)- Code: %d, Data: %v\n", curId, resp.Code, resp.Data)
+	core.AppLogger.Printf("Insert response (id %d)- Code: %d, Data: %v\n", curId, resp)
 
 	resNewVoteInChanel := AddNewVoteInChanel(vote.ChanelId, curId)
 	core.AppLogger.Println("resNewVoteInChanel", resNewVoteInChanel)
@@ -211,14 +210,12 @@ func FinishVote(voteId int) bool{
 	Operations(tarantool.NewOperations().Assign(4, false))
 
 	resp, _ := DbConnection.Do(req).Get()
-	core.AppLogger.Println(resp.SQLInfo)
-	if len(resp.Data) > 0{
+	if len(resp) > 0{
 		core.AppLogger.Printf("Запрос в БД на завершение голосования id %v не выполнен успешно\n", voteId)
 		resultFlag = true
 	}
 
 	core.AppLogger.Printf("Запрос в БД на завершение голосования id %v выполнен успешно\n", voteId)
-
 	return resultFlag
 }
 
@@ -233,7 +230,7 @@ func DeleteVote(voteId int) bool{
 	// Выполняем запрос
 	resp, _ := DbConnection.Do(req).Get()
 	
-	if len(resp.Data) > 0{
+	if len(resp) > 0{
 		core.AppLogger.Printf("Запрос в БД на завершение голосования id %v не выполнен успешно\n", voteId)
 		resultFlag = true
 	}

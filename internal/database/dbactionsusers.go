@@ -3,7 +3,7 @@ package database
 import (
 	"VkTestMattermostBot/internal/core"
 
-	"github.com/tarantool/go-tarantool"
+	"github.com/tarantool/go-tarantool/v2"
 )
 
 
@@ -14,11 +14,11 @@ func GetUserVotesDoneCast(userId string) []int{
 	req := tarantool.NewSelectRequest(tableNames[3]).Index("primary").Key([]interface{}{userId})
 	resp, _ := DbConnection.Do(req).Get()
 
-	if resp.Data == nil{
+	if resp == nil{
 		return []int{}
 	}
 
-	core.AppLogger.Println(resp.Data)
+	core.AppLogger.Println(resp)
 
 	return res
 }
@@ -28,21 +28,21 @@ func GetUserVotesDoneCast(userId string) []int{
 func AddInUserListNewVoteDoneCast(userId string, voteId int) bool{
 	reqGet := tarantool.NewSelectRequest(tableNames[3]).Index("primary").Key([]interface{}{userId})
 	respGet, _ := DbConnection.Do(reqGet).Get()
-	if respGet.Data == nil{
+	if respGet == nil{
 		req := tarantool.NewInsertRequest(tableNames[3]).Tuple([]interface{}{
 			userId,
 			[]int{voteId},
 		})
 		resp, _ := DbConnection.Do(req).Get()
-		if resp.Data == nil {
+		if resp == nil {
 			return false
 		}
 	} else {
 		newVoteList := []int{}
-		if len(respGet.Data) == 0{
+		if len(respGet) == 0{
 
 		} else{
-			newVoteListInterface := respGet.Data[0].([]interface{})[1].([]interface{})
+			newVoteListInterface := respGet[0].([]interface{})[1].([]interface{})
 			for _, elem := range newVoteListInterface{
 				newVoteList = append(newVoteList, int(elem.(uint64)))
 			}
@@ -60,7 +60,7 @@ func AddInUserListNewVoteDoneCast(userId string, voteId int) bool{
 			newVoteList,
 		})
 		resp, _ := DbConnection.Do(req).Get()
-		if resp.Data == nil{
+		if resp == nil{
 			return false
 		}
 	}

@@ -6,7 +6,7 @@ import (
 
 	"VkTestMattermostBot/internal/core"
 
-	"github.com/tarantool/go-tarantool"
+	"github.com/tarantool/go-tarantool/v2"
 )
 
 var DbConnection *tarantool.Connection
@@ -52,7 +52,7 @@ func initVoteTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 
 	// Зададим типы полей
 	core.AppLogger.Println("Запрос в БД на определение типов полей в таблице vote")
@@ -72,7 +72,7 @@ func initVoteTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 
 	// Создадим необходиые индексы
 	core.AppLogger.Println("Запрос в БД на создание первичного индекса по полю id")
@@ -86,7 +86,7 @@ func initVoteTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 
 	core.AppLogger.Println("Запрос в БД на создание индекса по полю Name")
     resp, _ = DbConnection.Call(fmt.Sprintf("box.space.%s:create_index", tableNames[0]),
@@ -97,7 +97,7 @@ func initVoteTable(){
             "if_not_exists": true,
 			"unique": false,
 	}})
-	log.Println(resp.Data)
+	log.Println(resp)
 }
 
 
@@ -112,7 +112,7 @@ func initChanelsTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 	
     // определение полей
 	core.AppLogger.Println("Запрос в БД на определение типов полей в таблице chanels")
@@ -125,7 +125,7 @@ func initChanelsTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 
 	// создание индексов
 	core.AppLogger.Println("Запрос в БД на создание первичного индекса таблицы chanels по полю chanel_id")
@@ -138,7 +138,7 @@ func initChanelsTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 }
 
 
@@ -153,7 +153,7 @@ func initVoteVariantsTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 
 	// определение полей
 	core.AppLogger.Println("Запрос в БД на определение типов полей в таблице vote_variants")
@@ -168,7 +168,7 @@ func initVoteVariantsTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 
 	// создание индексов
 	core.AppLogger.Println("Запрос в БД на создание первичного индекса таблицы vote_variants по полю id")
@@ -181,7 +181,7 @@ func initVoteVariantsTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 }
 
 
@@ -197,7 +197,7 @@ func initUsersTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 
 	// определение полей
 	core.AppLogger.Println("Запрос в БД на определение типов полей в таблице vote_variants")
@@ -210,7 +210,7 @@ func initUsersTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 
 	// создание индексов
 	core.AppLogger.Println("Запрос в БД на создание первичного индекса таблицы users по полю id")
@@ -223,5 +223,5 @@ func initUsersTable(){
 	if err != nil{
 		panic(err)
 	}
-	log.Println(resp.Data)
+	log.Println(resp)
 }

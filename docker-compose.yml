@@ -1,48 +1,27 @@
 services:
-  tarantool:
-    image: tarantool/tarantool:latest
-    command: tarantool -i /app/init.lua
-    volumes:
-      - ./init.lua:/app/init.lua
-    environment:
-      - TARANTOOL_USERNAME=storage
-      - TARANTOOL_PASSWORD=passw0rd
-    ports:
-      - "3301:3301"
-    healthcheck:
-      test: ["CMD-SHELL", "status"]
-      interval: 5s
-      timeout: 2s
-      retries: 5
-    restart: unless-stopped
-
   mattermost:
     image: mattermost/mattermost-preview
+    container_name: mattermost
     ports:
       - "8065:8065"
+    environment:
+      MM_SERVICESETTINGS_ENABLELOCALMODE: "true"
+
+  tarantool:
+    image: tarantool/tarantool
+    container_name: tarantool
+    ports:
+      - "3301:3301"
     volumes:
-      - mm-preview-data:/mattermost/data
-      - mm-preview-config:/mattermost/config
-    restart: unless-stopped
+      - ./init.lua:/opt/tarantool/init.lua
+    command: [ "tarantool", "/opt/tarantool/init.lua" ]
 
   bot:
     build: .
+    container_name: bot
+    env_file:
+      - .env
     depends_on:
-      tarantool:
-        condition: service_healthy
-      mattermost:
-        condition: service_healthy
-
-    environment:
-      - DB_HOST=0.0.0.0
-      - DB_PORT=3301
-      - SERVER_URL=http://localhost:8065
-      - WEBSOCKET_URL=ws://localhost:8065
-      - DB_USER=storage
-      - DB_PASSWORD=passw0rd
-      - BOT_TOKEN=${BOT_TOKEN}
-    restart: unless-stopped
-
-volumes:
-  mm-preview-data:
-  mm-preview-config:
+      - tarantool
+    ports:
+      - "8080:8080"
