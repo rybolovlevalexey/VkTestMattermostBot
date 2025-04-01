@@ -36,5 +36,6 @@ docker-compose up --build mattermost tarantool
 - В файл .env поместить токен бота mattermost
 
 ```bash
+go mod tidy
 go run main.go
 ```
